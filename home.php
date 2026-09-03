@@ -64,6 +64,7 @@ if ($search !== "") {
 
     <div class="nav-links">
         <span>Hi, <?php echo htmlspecialchars($username); ?></span>
+            <a href="profile.php">Manage Profile</a>
         <a href="cart.php" class="cart">Cart <span id="cartCount">0</span></a>
         <a href="logout.php">Logout</a>
     </div>
