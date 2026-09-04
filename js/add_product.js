@@ -99,15 +99,11 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    const logout = document.querySelector(
-        'a[href="admin_logout.php"]'
-    );
+    const logout = document.querySelector('a[href="admin_logout.php"]');
 
     if (logout) {
         logout.addEventListener("click", function (event) {
-            const confirmLogout = confirm(
-                "Are you sure you want to logout?"
-            );
+            const confirmLogout = confirm("Are you sure you want to logout?");
 
             if (!confirmLogout) {
                 event.preventDefault();

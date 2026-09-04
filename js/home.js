@@ -2,9 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const buttons = document.querySelectorAll(".add-cart");
     const cartCount = document.getElementById("cartCount");
 
-    let cart = JSON.parse(
-        localStorage.getItem("inknestCart")
-    ) || [];
+    let cart = JSON.parse(localStorage.getItem("inknestCart")) || [];
     updateCartCount();
 
     buttons.forEach(function (button) {

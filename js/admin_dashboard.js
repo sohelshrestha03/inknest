@@ -5,9 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (logout) {
         logout.addEventListener("click", function (event) {
-            const confirmLogout = confirm(
-                "Are you sure you want to logout?"
-            );
+            const confirmLogout = confirm("Are you sure you want to logout?");
 
             if (!confirmLogout) {
                 event.preventDefault();

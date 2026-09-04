@@ -1,13 +1,9 @@
 document.addEventListener("DOMContentLoaded", function () {
     const deleteButtons=document.querySelectorAll(".delete-product");
 
-
     deleteButtons.forEach(function (button) {
         button.addEventListener("click", function (event) {
-            const confirmDelete = confirm(
-                "Are you sure you want to delete this product?"
-            );
-
+            const confirmDelete = confirm("Are you sure you want to delete this product?");
 
             if (!confirmDelete) {
                 event.preventDefault();
@@ -15,9 +11,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    const logout =document.querySelector(
-            'a[href="admin_logout.php"]'
-        );
+    const logout =document.querySelector('a[href="admin_logout.php"]');
 
     if (logout) {
         logout.addEventListener("click", function (event) {

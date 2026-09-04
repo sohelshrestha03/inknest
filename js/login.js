@@ -8,18 +8,12 @@ document.addEventListener("DOMContentLoaded", function () {
         clearErrors();
 
         if (login.value.trim() === "") {
-            showError(
-                login,
-                "Username or phone number is required."
-            );
+            showError(login,"Username or phone number is required.");
             valid = false;
         }
 
         if (password.value === "") {
-            showError(
-                password,
-                "Password is required."
-            );
+            showError(password,"Password is required.");
             valid = false;
         }
 
@@ -32,7 +26,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function showError(input, message) {
         input.classList.add("input-error");
         const error = document.createElement("small");
-
         error.className = "error-message";
         error.textContent = message;
         input.parentElement.appendChild(error);
@@ -45,7 +38,6 @@ document.addEventListener("DOMContentLoaded", function () {
             .forEach(function (error) {
                 error.remove();
             });
-
 
         document
             .querySelectorAll("input")

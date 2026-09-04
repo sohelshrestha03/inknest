@@ -5,11 +5,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const cartCount = document.getElementById("cartCount");
     const cartTotal = document.getElementById("cartTotal");
     const finalTotal = document.getElementById("finalTotal");
-    const checkoutButton =
-        document.getElementById("checkoutButton");
+    const checkoutButton =document.getElementById("checkoutButton");
 
-    let cart =
-        JSON.parse(localStorage.getItem("inknestCart")) || [];
+    let cart =JSON.parse(localStorage.getItem("inknestCart")) || [];
     updateCartCount();
 
     if (cart.length === 0) {

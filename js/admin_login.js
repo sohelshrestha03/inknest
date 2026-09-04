@@ -9,26 +9,18 @@ document.addEventListener("DOMContentLoaded", function () {
         clearErrors();
 
         if (username.value.trim() === "") {
-            showError(
-                username,
-                "Username is required."
-            );
+            showError(username,"Username is required.");
             valid = false;
         }
 
         if (password.value === "") {
-            showError(
-                password,
-                "Password is required."
-            );
-
+            showError(password,"Password is required.");
             valid = false;
         }
 
         if (!valid) {
             event.preventDefault();
         }
-
     });
 
 

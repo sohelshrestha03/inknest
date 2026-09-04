@@ -9,30 +9,18 @@ document.addEventListener("DOMContentLoaded", function () {
         clearErrors();
 
         if (newPassword.value === "") {
-            showError(
-                newPassword,
-                "Password is required."
-            );
+            showError(newPassword,"Password is required.");
             valid = false;
         } else if (newPassword.value.length < 8) {
-            showError(
-                newPassword,
-                "Password must be at least 8 characters."
-            );
+            showError(newPassword,"Password must be at least 8 characters.");
             valid = false;
         }
 
         if (confirmPassword.value === "") {
-            showError(
-                confirmPassword,
-                "Please confirm your password."
-            );
+            showError(confirmPassword,"Please confirm your password.");
             valid = false;
         } else if (newPassword.value !== confirmPassword.value) {
-            showError(
-                confirmPassword,
-                "Passwords do not match."
-            );
+            showError(confirmPassword,"Passwords do not match.");
             valid = false;
         }
         if (!valid) {
