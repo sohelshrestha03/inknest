@@ -16,7 +16,7 @@ $username = $_SESSION["username"];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cart | Inknest</title>
     <link rel="stylesheet" href="css/cart.css?v=<?php echo time(); ?>">
-    <script src="js/cart.js" defer></script>
+    <script src="js/cart.js?v=<?php echo time(); ?>"></script>
 </head>
 
 <body>
@@ -57,7 +57,7 @@ $username = $_SESSION["username"];
 
         <div class="summary-row">
             <span>Shipping</span>
-            <strong>Free</strong>
+            <strong id="shippingCharge">Rs. 100.00</strong>
         </div>
 
         <div class="summary-row total">

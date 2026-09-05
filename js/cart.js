@@ -4,78 +4,66 @@ document.addEventListener("DOMContentLoaded", function () {
     const cartSummary = document.getElementById("cartSummary");
     const cartCount = document.getElementById("cartCount");
     const cartTotal = document.getElementById("cartTotal");
+    const shippingElement = document.getElementById("shippingCharge");
     const finalTotal = document.getElementById("finalTotal");
-    const checkoutButton =document.getElementById("checkoutButton");
+    const checkoutButton = document.getElementById("checkoutButton");
+    const shippingCharge = 100;
+    let cart = JSON.parse(localStorage.getItem("inknestCart")) || [];
 
-    let cart =JSON.parse(localStorage.getItem("inknestCart")) || [];
     updateCartCount();
-
     if (cart.length === 0) {
         showEmptyCart();
         return;
     }
-    loadCartProducts();
 
-   function loadCartProducts() {
-    const productIds = [...new Set(cart)];
-    fetch("get_cart_products.php?ids=" + productIds.join(","))
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(
-                    "Server error: " + response.status
-                );
-            }
-            return response.text();
-        })
-        .then(data => {
-            console.log("get_cart_products.php response:");
-            console.log(data);
-            let products;
-            try {
-                products = JSON.parse(data);
-            } catch (error) {
-                throw new Error(
-                    "get_cart_products.php did not return valid JSON."
-                );
-            }
-            if (products.error) {
-                throw new Error(products.error);
-            }
-            if (products.length === 0) {
-                showEmptyCart();
-                return;
-            }
-            displayCart(products);
-        })
-        .catch(error => {
-            console.error("Cart Error:", error);
-            cartContainer.innerHTML = `
-                <div class="error-message">
-                    ${escapeHtml(error.message)}
-                </div>
-            `;
-        });
-  }
+    loadCartProducts();
+    function loadCartProducts() {
+        const productIds = [...new Set(cart)];
+        fetch("get_cart_products.php?ids=" + productIds.join(","))
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Server error: " + response.status);
+                }
+                return response.json();
+            })
+            .then(products => {
+                if (products.error) {
+                    throw new Error(products.error);
+                }
+                if (products.length === 0) {
+                    showEmptyCart();
+                    return;
+                }
+                displayCart(products);
+            })
+            .catch(error => {
+                console.error("Cart Error:", error);
+                cartContainer.innerHTML = `
+                    <div class="error-message">
+                        ${escapeHtml(error.message)}
+                    </div>
+                `;
+            });
+    }
 
     function displayCart(products) {
         cartContainer.innerHTML = "";
-        let total = 0;
-
+        let subtotal = 0;
         products.forEach(function (product) {
-            const quantity =cart.filter(id => id == product.id).length;
-            const itemTotal =parseFloat(product.price) * quantity;
-            total += itemTotal;
-            const cartItem =document.createElement("div");
+            const quantity = cart.filter(
+                id => id == product.id
+            ).length;
+            const price = parseFloat(product.price);
+            const itemTotal = price * quantity;
+            subtotal += itemTotal;
+            const cartItem = document.createElement("div");
             cartItem.className = "cart-item";
             cartItem.innerHTML = `
                 <div class="cart-image">
                     ${
                         product.image
                         ?
-                        `<img
-                            src="images/products/${escapeHtml(product.image)}"
-                            alt="${escapeHtml(product.product_name)}"
-                        >`
+                        `<img src="images/products/${escapeHtml(product.image)}" alt="${escapeHtml(product.product_name)}">`
                         :
                         `<div class="no-image">
                             No Image
@@ -85,14 +73,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 <div class="cart-info">
                     <h3>${escapeHtml(product.product_name)}</h3>
+
                     <p>${escapeHtml(product.description)}</p>
-                    <strong>Rs. ${parseFloat(product.price).toFixed(2)}</strong>
+                    <strong>Rs. ${price.toFixed(2)}</strong>
                 </div>
 
                 <div class="quantity">
                     <button class="quantity-btn decrease" data-id="${product.id}">−</button>
                     <span>${quantity}</span>
-                    <button class="quantity-btn increase"data-id="${product.id}">+</button>
+                    <button class="quantity-btn increase" data-id="${product.id}">+</button>
                 </div>
 
                 <div class="item-total">
@@ -104,8 +93,13 @@ document.addEventListener("DOMContentLoaded", function () {
             cartContainer.appendChild(cartItem);
         });
 
-        cartTotal.textContent ="Rs. " + total.toFixed(2);
-        finalTotal.textContent ="Rs. " + total.toFixed(2);
+        const finalAmount = subtotal + shippingCharge;
+        cartTotal.textContent ="Rs. " + subtotal.toFixed(2);
+        shippingElement.textContent ="Rs. " + shippingCharge.toFixed(2);
+        finalTotal.textContent ="Rs. " + finalAmount.toFixed(2);
+        console.log("Subtotal:", subtotal);
+        console.log("Shipping:", shippingCharge);
+        console.log("Final Total:", finalAmount);
         emptyCart.style.display = "none";
         cartSummary.style.display = "block";
         addCartEvents();
@@ -121,7 +115,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     loadCartProducts();
                 });
             });
-
 
         document.querySelectorAll(".decrease")
             .forEach(function (button) {
@@ -144,7 +137,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         cartId => cartId != id
                     );
                     saveCart();
-                    loadCartProducts();
+
+                    if (cart.length === 0) {
+                        showEmptyCart();
+                    } else {
+                        loadCartProducts();
+                    }
                 });
             });
     }
@@ -166,6 +164,7 @@ document.addEventListener("DOMContentLoaded", function () {
         emptyCart.style.display = "block";
         cartSummary.style.display = "none";
         cartCount.textContent = "0";
+
     }
 
     function escapeHtml(value) {
@@ -181,4 +180,5 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         window.location.href = "checkout.php";
     });
+
 });
