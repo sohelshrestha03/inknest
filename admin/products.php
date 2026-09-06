@@ -26,7 +26,7 @@ if (isset($_GET["delete"])) {
 
 $result = mysqli_query(
     $conn,
-    "SELECT id, product_name, description, price, image
+    "SELECT id, product_name,category, description, price, image,stock
      FROM products
      ORDER BY id DESC"
 );
@@ -76,8 +76,10 @@ $result = mysqli_query(
                     <tr>
                         <th>Image</th>
                         <th>Product</th>
+                        <th>Category</th>
                         <th>Description</th>
                         <th>Price</th>
+                        <th>Stock</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -106,6 +108,15 @@ $result = mysqli_query(
                             </strong>
                         </td>
                         <td>
+                            <strong>
+                                <?php
+                                echo htmlspecialchars(
+                                    $product["category"]
+                                );
+                                ?>
+                            </strong>
+                        </td>
+                        <td>
                             <?php
                             echo htmlspecialchars(
                                 $product["description"]
@@ -118,6 +129,14 @@ $result = mysqli_query(
                             echo number_format(
                                 $product["price"],
                                 2
+                            );
+                            ?>
+                        </td>
+
+                        <td>
+                            <?php
+                            echo htmlspecialchars(
+                                $product["stock"]
                             );
                             ?>
                         </td>

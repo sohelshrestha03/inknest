@@ -1,0 +1,139 @@
+ * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #f7f7f7;
+    color: #111;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+}
+
+.payment-container {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 40px 30px;
+    text-align: center;
+}
+
+.icon {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.success-icon {
+    background: #e8f7ed;
+    color: #16803c;
+}
+
+.error-icon {
+    background: #fdeaea;
+    color: #c62828;
+}
+
+h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+}
+
+.message{
+    color: #666;
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+.order-info {
+    background: #f7f7f7;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.order-row{
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.order-row span {
+    color: #666;
+}
+
+.order-row strong {
+    color: #111;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.button {
+    display: block;
+    text-decoration: none;
+    padding: 13px 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.primary {
+    background: #111;
+    color: #fff;
+}
+
+.primary:hover {
+    background: #222;
+}
+
+.secondary {
+    background: #fff;
+    color: #111;
+    border: 1px solid #ddd;
+}
+
+.secondary:hover {
+    background: #f7f7f7;
+}
+
+.error-message {
+    color: #c62828;
+    background: #fff1f1;
+    border: 1px solid #f1cccc;
+    border-radius: 5px;
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+@media (max-width: 500px) {
+    .payment-container {
+        padding: 30px 20px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+}

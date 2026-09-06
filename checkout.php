@@ -84,6 +84,16 @@ $username = $_SESSION["username"];
                             </div>
                         </div>
                     </label>
+
+                    <label class="payment-option">
+                        <input type="radio" name="payment_method" value="cash">
+                        <div class="payment-info">
+                            <img src="img/cash.png" alt="Khalti" class="payment-logo">
+                            <div class="payment-text">
+                               <strong>Pay with Cash</strong>
+                            </div>
+                        </div>
+                    </label>
                 </div>
                 <button type="submit" id="payButton">Continue to Payment</button>
             </form>

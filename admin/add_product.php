@@ -12,14 +12,23 @@ $success = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $productName = trim($_POST["product_name"]);
+    $category = trim($_POST["category"]);
     $description = trim($_POST["description"]);
     $price = trim($_POST["price"]);
+    $stock = trim($_POST["stock"]);
 
-    if ($productName === "" || $description === "" || $price === "") {
+    if ($productName === "" ||$category === "" ||$description === "" ||$price === "" ||$stock === "") {
         $error = "Please fill in all fields.";
     } elseif (!is_numeric($price) || $price <= 0) {
         $error = "Please enter a valid price.";
-    } elseif (!isset($_FILES["image"]) || $_FILES["image"]["error"] !== UPLOAD_ERR_OK) {
+    } elseif (!filter_var($stock, FILTER_VALIDATE_INT) && $stock !== "0") {
+        $error = "Please enter a valid stock quantity.";
+    } elseif ($stock < 0) {
+        $error = "Stock cannot be negative.";
+    } elseif (
+        !isset($_FILES["image"]) ||
+        $_FILES["image"]["error"] !== UPLOAD_ERR_OK
+    ) {
         $error = "Please select a product image.";
     } else {
         $image = $_FILES["image"];
@@ -27,7 +36,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $extension = strtolower(
             pathinfo($image["name"], PATHINFO_EXTENSION)
         );
-
         if (!in_array($extension, $allowedExtensions)) {
             $error = "Only JPG, JPEG, PNG and WEBP images are allowed.";
         } elseif ($image["size"] > 5 * 1024 * 1024) {
@@ -56,16 +64,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     if (move_uploaded_file($image["tmp_name"], $uploadPath)) {
                         $sql = mysqli_prepare(
                             $conn,
-                            "INSERT INTO products(product_name, description, price, image) VALUES (?, ?, ?, ?)"
+                            "INSERT INTO products(product_name, category, description, price, stock, image)VALUES (?, ?, ?, ?, ?, ?)"
                         );
 
                         mysqli_stmt_bind_param(
-                            $sql,
-                            "ssds",
-                            $productName,
-                            $description,
-                            $price,
-                            $newFileName
+                              $sql,
+                              "sssdss",
+                              $productName,
+                              $category,
+                              $description,
+                              $price,
+                              $stock,
+                              $newFileName
                         );
 
                         if (mysqli_stmt_execute($sql)) {
@@ -143,8 +153,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <form id="addProductForm" action="add_product.php" method="POST" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="product_name">Product Name</label>
-
                 <input type="text" id="product_name" name="product_name" placeholder="Enter product name" value="<?php echo isset($_POST["product_name"]) ? htmlspecialchars($_POST["product_name"]) : ""; ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <input type="text" id="category" name="category" placeholder="Enter product category" value="<?php echo isset($_POST["category"]) ? htmlspecialchars($_POST["category"]): "";?>">
             </div>
 
             <div class="form-group">
@@ -155,6 +169,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="form-group">
                 <label for="price">Price</label>
                 <input type="number" id="price" name="price" placeholder="Enter price" min="0.01" step="0.01" value="<?php echo isset($_POST["price"]) ? htmlspecialchars($_POST["price"]) : ""; ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="stock">Stock</label>
+                <input type="number" id="stock" name="stock" placeholder="Enter stock quantity" min="0" step="1" value="<?php echo isset($_POST["stock"]) ? htmlspecialchars($_POST["stock"]): "";?>">
+                <small>Enter the available quantity of this product.</small>
             </div>
 
             <div class="form-group">
