@@ -26,7 +26,7 @@ if (isset($_GET["delete"])) {
     exit();
 }
 
-$sql = "SELECT id, first_name, last_name, user_name, email, phone_no FROM users ORDER BY id DESC";
+$sql = "SELECT id, first_name, last_name, user_name, email, phone_no FROM users";
 $users = mysqli_query($conn, $sql);
 ?>
 
