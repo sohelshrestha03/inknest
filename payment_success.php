@@ -6,6 +6,7 @@ if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
 }
+
 $userId = (int) $_SESSION["user_id"];
 $success = false;
 $error = "";
@@ -13,8 +14,7 @@ $paymentMethod = "";
 $orderId = 0;
 $transactionId = null;
 $esewaProductCode = "EPAYTEST";
-$esewaSecretKey ="8gBm/:&EnhH.1/q";
-$khaltiSecretKey ="405d86faaaca4c3dacc4489b57fbcae7";
+$esewaSecretKey = "8gBm/:&EnhH.1/q";
 
 function updateOrderPayment(
     $conn,
@@ -22,15 +22,16 @@ function updateOrderPayment(
     $paymentStatus,
     $transactionId = null
 ) {
-    $sql="UPDATE orders SET payment_status = ?,transaction_id = ? WHERE id = ?";
-    $stmt =
-        mysqli_prepare(
-            $conn,
-            $sql
-        );
+    $sql = "UPDATE orders
+            SET payment_status = ?, transaction_id = ?
+            WHERE id = ?";
+
+    $stmt = mysqli_prepare($conn, $sql);
+
     if (!$stmt) {
         return false;
     }
+
     mysqli_stmt_bind_param(
         $stmt,
         "ssi",
@@ -38,146 +39,150 @@ function updateOrderPayment(
         $transactionId,
         $orderId
     );
-    $result =mysqli_stmt_execute($stmt);
+
+    $result = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
+
     return $result;
 }
 
-if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
-    $paymentMethod = "khalti";
-    $pidx =trim($_GET["pidx"]);
-    $sql = "SELECT id, total_amount,payment_method,transaction_id
-        FROM orders WHERE user_id = ? AND payment_method = 'khalti'AND transaction_id = ?
-        LIMIT 1";
-    $stmt =mysqli_prepare(
-            $conn,
-            $sql
-        );
-    if (!$stmt) {
-        $error ="Unable to verify the order.";
-    } else {
-        mysqli_stmt_bind_param(
-            $stmt,
-            "is",
-            $userId,
-            $pidx
-        );
-        mysqli_stmt_execute($stmt);
-        $result =mysqli_stmt_get_result($stmt);
+function recordPurchaseActivity($conn, $userId, $orderId)
+{
+    $sql = "SELECT DISTINCT product_id
+            FROM order_items
+            WHERE order_id = ?";
 
-        if (mysqli_num_rows($result) !== 1) {
-            $error ="Invalid Khalti payment information.";
-        } else {
-            $order =mysqli_fetch_assoc($result);
-            $orderId =(int) $order["id"];
-            $orderAmount =(float) $order["total_amount"];
+    $stmt = mysqli_prepare($conn, $sql);
+
+    if (!$stmt) {
+        error_log(
+            "Purchase activity SELECT prepare failed: "
+            . mysqli_error($conn)
+        );
+        return false;
+    }
+
+    mysqli_stmt_bind_param(
+        $stmt,
+        "i",
+        $orderId
+    );
+
+    if (!mysqli_stmt_execute($stmt)) {
+        error_log(
+            "Purchase activity SELECT execute failed: "
+            . mysqli_stmt_error($stmt)
+        );
+
+        mysqli_stmt_close($stmt);
+        return false;
+    }
+
+    $result = mysqli_stmt_get_result($stmt);
+
+    $activitySql = "INSERT INTO user_product_activity
+                    (user_id, product_id, activity_type)
+                    VALUES (?, ?, ?)";
+
+    $activityStmt = mysqli_prepare(
+        $conn,
+        $activitySql
+    );
+
+    if (!$activityStmt) {
+        error_log(
+            "Purchase activity INSERT prepare failed: "
+            . mysqli_error($conn)
+        );
+
+        mysqli_stmt_close($stmt);
+        return false;
+    }
+
+    $activityType = "Purchase";
+
+    while ($row = mysqli_fetch_assoc($result)) {
+
+        $productId = (int) $row["product_id"];
+
+        mysqli_stmt_bind_param(
+            $activityStmt,
+            "iis",
+            $userId,
+            $productId,
+            $activityType
+        );
+
+        if (!mysqli_stmt_execute($activityStmt)) {
+            error_log(
+                "Purchase activity INSERT failed: "
+                . mysqli_stmt_error($activityStmt)
+            );
+
+            mysqli_stmt_close($activityStmt);
             mysqli_stmt_close($stmt);
 
-            if (empty($khaltiSecretKey) ||$khaltiSecretKey ==="405d86faaaca4c3dacc4489b57fbcae7") {
-                $error ="Khalti test secret key is not configured.";
-            } else {
-                $url="https://dev.khalti.com/api/v2/epayment/lookup/";
-                $data =json_encode([
-                        "pidx" => $pidx
-                    ]);
-                $ch =curl_init($url);
-                curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
-                curl_setopt($ch,CURLOPT_POST,true);
-                curl_setopt($ch,CURLOPT_POSTFIELDS,$data);
-                curl_setopt($ch,
-                    CURLOPT_HTTPHEADER,
-                    ["Authorization: Key ". $khaltiSecretKey,
-                        "Content-Type: application/json"
-                    ]
-                );
-
-                $response=curl_exec($ch);
-                $curlError =curl_error($ch);
-                $httpCode =curl_getinfo($ch,CURLINFO_HTTP_CODE);
-                curl_close($ch);
-
-                if ($response===false) {
-                    $error ="Khalti verification failed: ".$curlError;
-                } else {
-                    $khaltiResponse =json_decode($response,true);
-                    if (!is_array($khaltiResponse)) {
-                        $error ="Invalid response received from Khalti.";
-                    } elseif ($httpCode<200 || $httpCode>=300) {
-                        $error ="Khalti verification request failed.";
-                    } else {
-                        $paidAmountPaisa =isset($khaltiResponse["total_amount"])
-                            ? (int)
-                                $khaltiResponse["total_amount"]
-                            : 0;
-
-                        $expectedAmountPaisa =(int) round($orderAmount * 100);
-
-                        if (isset($khaltiResponse["status"]) && $khaltiResponse["status"]==="Completed" && $paidAmountPaisa === $expectedAmountPaisa) {
-                            $transactionId =$khaltiResponse["transaction_id"]?? $pidx;
-                            if (
-                                updateOrderPayment(
-                                    $conn,
-                                    $orderId,
-                                    "Paid",
-                                    $transactionId
-                                )
-                            ) {
-                                $success = true;
-                            } else {
-                                $error ="Payment was verified, but the order could not be updated.";
-                            }
-                        } else {
-                            $status=$khaltiResponse["status"]?? "Unknown";
-                            $error ="Khalti payment was not completed. Status: ".htmlspecialchars($status);
-                        }
-                    }
-                }
-            }
+            return false;
         }
     }
-} elseif (isset($_GET["data"]) && !empty($_GET["data"])) {
+    mysqli_stmt_close($activityStmt);
+    mysqli_stmt_close($stmt);
+    return true;
+}
+
+
+if (isset($_GET["data"])
+    &&
+    !empty($_GET["data"])) {
     $paymentMethod = "esewa";
-    $decodedData =base64_decode(
-            $_GET["data"],
+    $decodedData = base64_decode(
+        $_GET["data"],
+        true
+    );
+
+    if ($decodedData === false) {
+        $error="Invalid eSewa payment response.";
+    } else {
+        $responseData = json_decode(
+            $decodedData,
             true
         );
 
-    if ($decodedData === false) {
-        $error ="Invalid eSewa payment response.";
-    } else {
-        $responseData =json_decode(
-                $decodedData,
-                true
-            );
-
-        if (!is_array($responseData)){
+        if (!is_array($responseData)) {
             $error ="Invalid eSewa payment data.";
         } else {
-            $status=$responseData["status"]?? "";
-            $totalAmount=$responseData["total_amount"]?? "";
-            $transactionUuid=$responseData["transaction_uuid"]?? "";
-            $productCode=$responseData["product_code"]?? "";
-            $transactionCode=$responseData["transaction_code"]?? "";
-            $signedFieldNames=$responseData["signed_field_names"]?? "";
-            $signature=$responseData["signature"]?? "";
+            $status=$responseData["status"] ?? "";
+            $totalAmount=$responseData["total_amount"] ?? "";
+            $transactionUuid=$responseData["transaction_uuid"] ?? "";
+            $productCode=$responseData["product_code"] ?? "";
+            $transactionCode=$responseData["transaction_code"] ?? "";
+            $signedFieldNames=$responseData["signed_field_names"] ?? "";
+            $signature=$responseData["signature"] ?? "";
 
             if (empty($transactionUuid)) {
                 $error ="eSewa transaction ID is missing.";
-            } elseif ($productCode!==$esewaProductCode){
-                $error ="Invalid eSewa product code.";
+            } elseif ($productCode !== $esewaProductCode) {
+                $error="Invalid eSewa product code.";
             } elseif (empty($signedFieldNames)) {
-                $error ="eSewa signature information is missing.";
+                $error="eSewa signature information is missing.";
             } elseif (empty($signature)) {
                 $error ="eSewa signature is missing.";
             } else {
-                $sql= "SELECT id,total_amount,payment_method,transaction_id FROM orders WHERE user_id = ? AND payment_method = 'esewa' AND transaction_id = ? LIMIT 1";
-                $stmt =mysqli_prepare(
-                        $conn,
-                        $sql
-                    );
+                $sql =
+                    "SELECT id, total_amount, payment_method, transaction_id
+                     FROM orders
+                     WHERE user_id = ?
+                     AND payment_method = 'esewa'
+                     AND transaction_id = ?
+                     LIMIT 1";
+
+                $stmt = mysqli_prepare(
+                    $conn,
+                    $sql
+                );
 
                 if (!$stmt) {
-                    $error ="Unable to verify the order.";
+                    $error="Unable to verify the order.";
                 } else {
                     mysqli_stmt_bind_param(
                         $stmt,
@@ -186,41 +191,49 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
                         $transactionUuid
                     );
                     mysqli_stmt_execute($stmt);
-                    $result =mysqli_stmt_get_result($stmt);
+                    $result=mysqli_stmt_get_result($stmt);
 
-                    if (mysqli_num_rows($result)!== 1) {
-                        $error ="eSewa order could not be found.";
+                    if (mysqli_num_rows($result) !== 1) {
+                        $error="eSewa order could not be found.";
                     } else {
-                        $order =mysqli_fetch_assoc($result);
-                        $orderId =(int) $order["id"];
-                        $orderAmount =(float)$order["total_amount"];
-                        $receivedAmount =(float) $totalAmount;
-                        $amountMatches =abs(
+                        $order=mysqli_fetch_assoc($result);
+                        $orderId=(int) $order["id"];
+                        $orderAmount=(float) $order["total_amount"];
+                        $receivedAmount=(float) $totalAmount;
+                        $amountMatches=abs(
                                 $receivedAmount
-                                - $orderAmount
+                                -
+                                $orderAmount
                             ) < 0.01;
 
                         if (!$amountMatches) {
-                            $error ="Payment amount does not match the order amount.";
+                            $error="Payment amount does not match the order amount.";
                         } else {
-                            $fieldNames =explode(
+                            $fieldNames =
+                                explode(
                                     ",",
                                     $signedFieldNames
                                 );
                             $messageParts = [];
+
                             foreach ($fieldNames as $field) {
-                                $field =trim($field);
+                                $field = trim($field);
                                 if (isset($responseData[$field])) {
-                                    $messageParts[] =$field. "=". $responseData[$field];
+                                    $messageParts[] =
+                                        $field
+                                        . "="
+                                        . $responseData[$field];
                                 }
                             }
 
-                            $message=implode(
+                            $message =
+                                implode(
                                     ",",
                                     $messageParts
                                 );
 
-                            $expectedSignature =base64_encode(
+                            $expectedSignature =
+                                base64_encode(
                                     hash_hmac(
                                         "sha256",
                                         $message,
@@ -230,10 +243,14 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
                                 );
 
                             if (!hash_equals($expectedSignature,$signature)) {
-                                $error ="eSewa signature verification failed.";
+                                $error="eSewa signature verification failed.";
                             } else {
-                                if ($status==="COMPLETE") {
-                                    $transactionId=!empty($transactionCode)? $transactionCode: $transactionUuid;
+                                if ($status === "COMPLETE") {
+                                    $transactionId =
+                                        !empty($transactionCode)
+                                        ? $transactionCode
+                                        : $transactionUuid;
+
                                     if (updateOrderPayment(
                                             $conn,
                                             $orderId,
@@ -243,10 +260,11 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
                                     ) {
                                         $success = true;
                                     } else {
-                                        $error ="Payment was verified, but the order could not be updated.";
+                                        $error="Payment was verified, but the order could not be updated.";
                                     }
                                 } else {
-                                    $error ="eSewa payment was not completed. Status: ". htmlspecialchars($status);
+                                    $error="eSewa payment was not completed. Status: "
+                                        . htmlspecialchars($status);
                                 }
                             }
                         }
@@ -256,18 +274,29 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
             }
         }
     }
-} elseif (isset($_GET["method"]) && $_GET["method"] === "cash" && isset($_GET["order_id"])) {
-    $paymentMethod="cash";
+} elseif (isset($_GET["method"])
+    &&
+    $_GET["method"] === "cash"
+    &&
+    isset($_GET["order_id"])
+) {
+    $paymentMethod = "cash";
     $orderId=(int) $_GET["order_id"];
-    $sql = "SELECT id,total_amount,payment_method FROM orders WHERE id = ?
-        AND user_id = ? AND payment_method = 'cash' LIMIT 1";
-    $stmt=mysqli_prepare(
-            $conn,
-            $sql
-        );
+    $sql =
+        "SELECT id, total_amount, payment_method
+         FROM orders
+         WHERE id = ?
+         AND user_id = ?
+         AND payment_method = 'cash'
+         LIMIT 1";
+
+    $stmt = mysqli_prepare(
+        $conn,
+        $sql
+    );
 
     if (!$stmt) {
-        $error ="Unable to verify the order.";
+        $error="Unable to verify the order.";
     } else {
         mysqli_stmt_bind_param(
             $stmt,
@@ -276,10 +305,10 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
             $userId
         );
         mysqli_stmt_execute($stmt);
-        $result =mysqli_stmt_get_result($stmt);
+        $result=mysqli_stmt_get_result($stmt);
 
-        if (mysqli_num_rows($result)!== 1) {
-            $error ="Invalid cash order.";
+        if (mysqli_num_rows($result) !== 1) {
+            $error="Invalid cash order.";
         } else {
             if (updateOrderPayment(
                     $conn,
@@ -290,13 +319,61 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
             ) {
                 $success = true;
             } else {
-                $error ="Order was created, but payment status could not be updated.";
+                $error="Order was created, but payment status could not be updated.";
             }
         }
         mysqli_stmt_close($stmt);
     }
 } else {
-    $error ="No valid payment information was received.";
+    $error="No valid payment information was received.";
+}
+
+if ($success === true && $orderId > 0) {
+    $checkSql =
+        "SELECT COUNT(*) AS total
+         FROM user_product_activity upa
+         INNER JOIN order_items oi
+             ON upa.product_id = oi.product_id
+         WHERE upa.user_id = ?
+         AND oi.order_id = ?
+         AND upa.activity_type = 'Purchase'";
+
+    $checkStmt =
+        mysqli_prepare(
+            $conn,
+            $checkSql
+        );
+
+    if ($checkStmt) {
+        mysqli_stmt_bind_param(
+            $checkStmt,
+            "ii",
+            $userId,
+            $orderId
+        );
+        mysqli_stmt_execute($checkStmt);
+        $checkResult =
+            mysqli_stmt_get_result(
+                $checkStmt
+            );
+
+        $checkRow =
+            mysqli_fetch_assoc(
+                $checkResult
+            );
+
+        mysqli_stmt_close(
+            $checkStmt
+        );
+
+        if ((int) $checkRow["total"] === 0) {
+            recordPurchaseActivity(
+                $conn,
+                $userId,
+                $orderId
+            );
+        }
+    }
 }
 ?>
 
@@ -339,24 +416,44 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
         <div class="order-info">
             <div class="order-row">
                 <span>Order ID</span>
-                <strong>#<?php echo htmlspecialchars($orderId); ?></strong>
+                <strong>
+                    #<?php echo htmlspecialchars($orderId); ?>
+                </strong>
             </div>
 
             <div class="order-row">
                 <span>Payment Method</span>
-                <strong><?php echo htmlspecialchars(strtoupper($paymentMethod));?></strong>
+                <strong>
+                    <?php
+                    echo htmlspecialchars(
+                        strtoupper($paymentMethod)
+                    );
+                    ?>
+                </strong>
             </div>
 
             <?php if (!empty($transactionId)): ?>
                 <div class="order-row">
                     <span>Transaction ID</span>
-                    <strong><?php echo htmlspecialchars($transactionId);?></strong>
+                    <strong>
+                        <?php
+                        echo htmlspecialchars(
+                            $transactionId
+                        );
+                        ?>
+                    </strong>
                 </div>
             <?php endif; ?>
 
             <div class="order-row">
                 <span>Payment Status</span>
-                <strong><?php echo $paymentMethod === "cash"? "Pending": "Paid";?></strong>
+                <strong>
+                    <?php
+                    echo $paymentMethod === "cash"
+                        ? "Pending"
+                        : "Paid";
+                    ?>
+                </strong>
             </div>
         </div>
 
@@ -368,22 +465,31 @@ if (isset($_GET["pidx"]) && !empty($_GET["pidx"])) {
         <script>
             localStorage.removeItem("inknestCart");
         </script>
-
     <?php else: ?>
         <div class="icon error-icon">
             !
         </div>
         <h1>Payment Failed</h1>
-        <p class="message">We could not confirm your payment.</p>
+        <p class="message">
+            We could not confirm your payment.
+        </p>
         <?php if (!empty($error)): ?>
             <div class="error-message">
-                <?php echo htmlspecialchars($error);?>
+                <?php
+                echo htmlspecialchars($error);
+                ?>
             </div>
         <?php endif; ?>
 
         <div class="buttons">
-            <a href="checkout.php" class="button primary">Back to Checkout</a>
-            <a href="cart.php" class="button secondary">Back to Cart</a>
+            <a href="checkout.php"
+                class="button primary">
+                Back to Checkout
+            </a>
+            <a href="cart.php"
+                class="button secondary">
+                Back to Cart
+            </a>
         </div>
     <?php endif; ?>
 </div>

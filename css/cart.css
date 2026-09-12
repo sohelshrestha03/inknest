@@ -30,10 +30,11 @@ body {
     gap: 25px;
 }
 
-.nav-links span {
+.nav-links span{
     font-size: 14px;
     color: #131313;
 }
+
 
 .nav-links a {
     color: #010101;

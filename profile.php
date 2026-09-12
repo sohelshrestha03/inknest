@@ -383,6 +383,251 @@ $initial = strtoupper(
         1
     )
 );
+
+
+if (isset($_POST["delete_account"])) {
+    $deletePassword = $_POST["delete_account_password"] ?? "";
+    if ($deletePassword === "") {
+        $error = "Please enter your current password.";
+    } else {
+        $passwordCheckSql = mysqli_prepare(
+            $conn,
+            "SELECT new_password
+             FROM users
+             WHERE id = ?"
+        );
+        mysqli_stmt_bind_param(
+            $passwordCheckSql,
+            "i",
+            $userId
+        );
+
+        mysqli_stmt_execute($passwordCheckSql);
+        $passwordCheckResult = mysqli_stmt_get_result(
+            $passwordCheckSql
+        );
+        $passwordCheckData = mysqli_fetch_assoc(
+            $passwordCheckResult
+        );
+        $storedPassword=$passwordCheckData["new_password"] ?? "";
+        mysqli_stmt_close($passwordCheckSql);
+        if (!password_verify($deletePassword, $storedPassword)) {
+            $error = "Current password is incorrect.";
+        } else {
+            $pictureSql = mysqli_prepare(
+                $conn,
+                "SELECT profile_picture
+                 FROM user_profiles
+                 WHERE user_id = ?"
+            );
+
+            mysqli_stmt_bind_param(
+                $pictureSql,
+                "i",
+                $userId
+            );
+            mysqli_stmt_execute($pictureSql);
+            $pictureResult = mysqli_stmt_get_result(
+                $pictureSql
+            );
+            $pictureData = null;
+
+            if ($pictureResult && mysqli_num_rows($pictureResult) === 1) {
+                $pictureData = mysqli_fetch_assoc(
+                    $pictureResult
+                );
+            }
+            mysqli_stmt_close($pictureSql);
+            $pictureToDelete=$pictureData["profile_picture"] ?? "";
+            mysqli_begin_transaction($conn);
+
+            try {
+                $activitySql = mysqli_prepare(
+                    $conn,
+                    "DELETE FROM user_product_activity
+                     WHERE user_id = ?"
+                );
+                mysqli_stmt_bind_param(
+                    $activitySql,
+                    "i",
+                    $userId
+                );
+
+                if (!mysqli_stmt_execute($activitySql)) {
+                    throw new Exception(
+                        "Failed to delete activity records."
+                    );
+                }
+                mysqli_stmt_close($activitySql);
+                $reviewSql = mysqli_prepare(
+                    $conn,
+                    "DELETE FROM product_reviews
+                     WHERE user_id = ?"
+                );
+
+                mysqli_stmt_bind_param(
+                    $reviewSql,
+                    "i",
+                    $userId
+                );
+
+                if (!mysqli_stmt_execute($reviewSql)) {
+                    throw new Exception(
+                        "Failed to delete review records."
+                    );
+                }
+                mysqli_stmt_close($reviewSql);
+                $orderIds = [];
+                $orderSelectSql = mysqli_prepare(
+                    $conn,
+                    "SELECT id
+                     FROM orders
+                     WHERE user_id = ?"
+                );
+
+                mysqli_stmt_bind_param(
+                    $orderSelectSql,
+                    "i",
+                    $userId
+                );
+                mysqli_stmt_execute($orderSelectSql);
+                $orderResult = mysqli_stmt_get_result(
+                    $orderSelectSql
+                );
+
+                while ($order = mysqli_fetch_assoc($orderResult)) {
+                    $orderIds[] = (int) $order["id"];
+                }
+
+                mysqli_stmt_close($orderSelectSql);
+
+                if (!empty($orderIds)) {
+                    $orderPlaceholders = implode(
+                        ",",
+                        array_fill(
+                            0,
+                            count($orderIds),
+                            "?"
+                        )
+                    );
+                    $orderItemSql = mysqli_prepare(
+                        $conn,
+                        "DELETE FROM order_items
+                         WHERE order_id IN ($orderPlaceholders)"
+                    );
+                    $orderTypes = str_repeat(
+                        "i",
+                        count($orderIds)
+                    );
+                    mysqli_stmt_bind_param(
+                        $orderItemSql,
+                        $orderTypes,
+                        ...$orderIds
+                    );
+
+                    if (!mysqli_stmt_execute($orderItemSql)) {
+                        throw new Exception(
+                            "Failed to delete order items."
+                        );
+                    }
+                    mysqli_stmt_close($orderItemSql);
+                }
+                $orderDeleteSql = mysqli_prepare(
+                    $conn,
+                    "DELETE FROM orders
+                     WHERE user_id = ?"
+                );
+
+                mysqli_stmt_bind_param(
+                    $orderDeleteSql,
+                    "i",
+                    $userId
+                );
+
+                if (!mysqli_stmt_execute($orderDeleteSql)) {
+                    throw new Exception(
+                        "Failed to delete orders."
+                    );
+                }
+                mysqli_stmt_close($orderDeleteSql);
+                $profileDeleteSql = mysqli_prepare(
+                    $conn,
+                    "DELETE FROM user_profiles
+                     WHERE user_id = ?"
+                );
+
+                mysqli_stmt_bind_param(
+                    $profileDeleteSql,
+                    "i",
+                    $userId
+                );
+
+                if (!mysqli_stmt_execute($profileDeleteSql)) {
+                    throw new Exception(
+                        "Failed to delete profile."
+                    );
+                }
+
+                mysqli_stmt_close($profileDeleteSql);
+                $userDeleteSql = mysqli_prepare(
+                    $conn,
+                    "DELETE FROM users
+                     WHERE id = ?"
+                );
+
+                mysqli_stmt_bind_param(
+                    $userDeleteSql,
+                    "i",
+                    $userId
+                );
+
+                if (!mysqli_stmt_execute($userDeleteSql)) {
+                    throw new Exception(
+                        "Failed to delete account."
+                    );
+                }
+
+                if (mysqli_stmt_affected_rows($userDeleteSql) !== 1) {
+                    throw new Exception(
+                        "Account could not be deleted."
+                    );
+                }
+
+                mysqli_stmt_close($userDeleteSql);
+                mysqli_commit($conn);
+
+                if ($pictureToDelete !== "") {
+                    $picturePath ="images/profile/" .
+                        basename($pictureToDelete);
+
+                    if (file_exists($picturePath) && is_file($picturePath)) {
+                        unlink($picturePath);
+                    }
+                }
+
+                $_SESSION = [];
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(
+                        session_name(),
+                        "",
+                        time() - 42000,
+                        $params["path"],
+                        $params["domain"],
+                        $params["secure"],
+                        $params["httponly"]
+                    );
+                }
+                session_destroy();
+                header("Location: login.php?account_deleted=1");
+                exit();
+            } catch (Throwable $e) {
+                mysqli_rollback($conn);
+                $error ="Unable to delete your account. " ."Please try again.";
+            }
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -537,6 +782,25 @@ $initial = strtoupper(
             </form>
         </div>
     </div>
+
+    <hr class="section-divider">
+
+<div class="delete-account-section">
+    <h2>Delete Account</h2>
+    <p class="delete-account-warning">
+        Permanently delete your Inknest account and all
+        associated account data. This action cannot be undone.
+    </p>
+
+    <form method="POST" onsubmit="return confirmDeleteAccount();">
+        <div class="form-group">
+            <label for="delete_account_password">Current Password</label>
+            <input type="password" id="delete_account_password" name="delete_account_password" placeholder="Enter your current password" required>
+        </div>
+
+        <button type="submit" name="delete_account" class="btn btn-danger delete-account-btn">Delete My Account</button>
+    </form>
+</div>
 </main>
 
 <script>
@@ -605,6 +869,16 @@ $initial = strtoupper(
             }
         );
     }
+
+    function confirmDeleteAccount() {
+    const firstConfirm = confirm("Are you sure you want to permanently delete your account?");
+
+    if (!firstConfirm) {
+        return false;
+    }
+    const secondConfirm = confirm("This will permanently delete your profile, reviews, activity, orders and account data. This action cannot be undone. Continue?");
+    return secondConfirm;
+}
 </script>
 </body>
 </html>

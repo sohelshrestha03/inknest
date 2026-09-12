@@ -292,6 +292,71 @@ tr:last-child td {
     margin: 0;
 }
 
+.order-container {
+    width:
+        100%;
+
+    overflow:
+        hidden;
+}
+
+.table-wrapper {
+    width:100%;
+    overflow-x:auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:auto;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    height:12px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background:#eeeeee;
+    border-radius:10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background:#888888;
+    border-radius:10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background:
+        #555555;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    height:12px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background:#eeeeee;
+    border-radius:10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background:#888888;
+    border-radius:10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background:#555555;
+}
+
+.table-wrapper table {
+    width:max-content;
+    min-width:1600px;
+    border-collapse:collapse;
+}
+
+
+.table-wrapper th,
+.table-wrapper td {
+    white-space:nowrap;
+}
+
 @media (max-width: 1000px) {
     .order-container {
         overflow-x: auto;

@@ -4,6 +4,7 @@ session_start();
 include "config/database.php";
 
 $error = "";
+$accountDeleted = isset($_GET["account_deleted"]) && $_GET["account_deleted"] === "1";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $login = trim($_POST["login"]);
@@ -14,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
         $sql = mysqli_prepare(
             $conn,
-            "SELECT id, first_name, last_name, user_name, phone_no, new_Password
+            "SELECT id, first_name, last_name, user_name, phone_no, new_password
              FROM users
              WHERE user_name = ? OR phone_no = ?"
         );
@@ -25,18 +26,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $login,
             $login
         );
-
         mysqli_stmt_execute($sql);
-
         $result = mysqli_stmt_get_result($sql);
 
         if (mysqli_num_rows($result) === 1) {
             $user = mysqli_fetch_assoc($result);
-            if (password_verify($password, $user["new_Password"])) {
+            if (password_verify($password, $user["new_password"])) {
                 $_SESSION["user_id"] = $user["id"];
                 $_SESSION["username"] = $user["user_name"];
                 $_SESSION["first_name"] = $user["first_name"];
                 $_SESSION["last_name"] = $user["last_name"];
+
+                $activitySql=mysqli_prepare($conn,
+                "INSERT INTO user_product_activity(
+                user_id,product_id,activity_type,created_at)
+                VALUES(?,NULL,'Logged In',NOW())"
+                );
+
+                if($activitySql){
+                    mysqli_stmt_bind_param(
+                        $activitySql,
+                        "i",
+                        $user["id"]
+                    );
+
+                    mysqli_stmt_execute($activitySql);
+                    mysqli_stmt_close($activitySql);
+                }
                 header("Location: home.php");
                 exit();
             } else {
@@ -45,7 +61,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $error = "Invalid username/phone or password.";
         }
-
         mysqli_stmt_close($sql);
     }
 }
@@ -79,30 +94,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         <?php endif; ?>
 
-
+            <?php if ($accountDeleted): ?>
+                <div class="success-box">
+                  Your account has been permanently deleted.
+                </div>
+            <?php endif; ?>
         <form id="loginForm" action="login.php" method="post">
             <div class="data">
                 <label for="login">Username or Phone Number</label>
                 <input type="text" id="login" name="login" placeholder="Enter username or phone" autocomplete="off" required>
             </div>
 
-
             <div class="data">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Enter your password" required>
             </div>
 
-
             <div class="forgot">
                 <a href="forgot_password.php">Forgot password?</a>
             </div>
 
-
             <div class="buttons">
                 <button type="submit">Login</button>
             </div>
-
-
             <p class="register-link">Don't have an account?<a href="register.php">Register</a></p>
         </form>
     </div>

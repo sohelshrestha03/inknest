@@ -167,6 +167,16 @@ body {
     margin-top: 5px;
 }
 
+.success-box {
+    margin-bottom: 20px;
+    padding: 12px 15px;
+    border: 1px solid #b7dfc6;
+    border-radius: 8px;
+    background: #f0fff4;
+    color: #19733e;
+    font-size: 14px;
+}
+
 @media (max-width: 600px) {
 
     .navigation {

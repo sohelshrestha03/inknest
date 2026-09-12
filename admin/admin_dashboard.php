@@ -54,6 +54,12 @@ if ($orderQuery) {
         <a href="add_product.php">Add Product</a>
         <a href="orders.php">Orders</a>
         <a href="users.php">Users</a>
+        <a href="user_profiles.php">User Profiles</a>
+        <a href="user_log.php">User Activity</a>
+        <a href="product_reviews.php">Product Reviews</a>
+        <a href="bill.php">Bills</a>
+        <a href="stock_management.php">Stock of Products</a>
+        <a href="stock_history.php">Stock History</a>
     </nav>
 
 

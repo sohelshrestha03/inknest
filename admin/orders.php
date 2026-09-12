@@ -89,6 +89,9 @@ $sql = "SELECT
         orders.payment_method,
         orders.payment_status,
         orders.transaction_id,
+        orders.email,
+        orders.phone,
+        orders.delivery_address,
         users.user_name,
         users.first_name,
         users.last_name
@@ -116,6 +119,12 @@ $orders = mysqli_query($conn, $sql);
         <a href="add_product.php">Add Product</a>
         <a href="orders.php" class="active">Orders</a>
         <a href="users.php">Users</a>
+        <a href="user_profiles.php">User Profiles</a>
+        <a href="user_log.php">User Activity</a>
+        <a href="product_reviews.php">Product Reviews</a>
+        <a href="bill.php">Bills</a>
+        <a href="stock_management.php">Stock of Products</a>
+        <a href="stock_history.php">Stock History</a>
     </nav>
 
     <div class="sidebar-bottom">
@@ -132,7 +141,8 @@ $orders = mysqli_query($conn, $sql);
     </header>
 
     <section class="order-container">
-        <?php if ($orders && mysqli_num_rows($orders) > 0): ?>
+    <?php if ($orders && mysqli_num_rows($orders) > 0): ?>
+        <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
@@ -143,6 +153,9 @@ $orders = mysqli_query($conn, $sql);
                         <th>Order Status</th>
                         <th>Date</th>
                         <th>Order Action</th>
+                        <th>Email</th>
+                        <th>Phone Number</th>
+                        <th>Delivery Address</th>
                         <th>Payment Method</th>
                         <th>Payment Status</th>
                         <th>Payment Action</th>
@@ -154,45 +167,153 @@ $orders = mysqli_query($conn, $sql);
                 <tbody>
                 <?php while ($order = mysqli_fetch_assoc($orders)): ?>
                     <tr>
-                        <td>#<?php echo (int) $order["id"]; ?></td>
-                        <td><?php echo htmlspecialchars($order["first_name"]. " ". $order["last_name"]);?></td>
-                        <td><?php echo htmlspecialchars($order["user_name"]);?></td>
-                        <td>Rs.<?php echo number_format((float) $order["total_amount"],2);?></td>
-                        <td><span class="status <?php echo strtolower($order["status"]); ?>">
-                                <?php echo htmlspecialchars($order["status"]);?>
-                            </span></td>
-                        <td><?php echo date("M d, Y",strtotime($order["order_date"]));?></td>
+                        <td>
+                            #<?php echo (int) $order["id"]; ?>
+                        </td>
+
+                        <td>
+                            <?php
+                            echo htmlspecialchars(
+                                $order["first_name"]
+                                .
+                                " "
+                                .
+                                $order["last_name"]
+                            );
+                            ?>
+                        </td>
+
+                        <td>
+                            <?php
+                            echo htmlspecialchars(
+                                $order["user_name"]
+                            );
+                            ?>
+                        </td>
+
+                        <td>
+                            Rs.
+                            <?php
+                            echo number_format(
+                                (float) $order["total_amount"],
+                                2
+                            );
+                            ?>
+                        </td>
+
+                        <td>
+                            <span class="status <?php echo strtolower($order["status"]); ?>">
+                                <?php
+                                echo htmlspecialchars(
+                                    $order["status"]
+                                );
+                                ?>
+                            </span>
+                        </td>
+
+                        <td>
+                            <?php
+                            echo date(
+                                "M d, Y",
+                                strtotime($order["order_date"])
+                            );
+                            ?>
+                        </td>
+
                         <td class="actions">
                             <form method="POST" action="orders.php">
                                 <input type="hidden" name="order_id" value="<?php echo (int) $order["id"]; ?>">
                                 <select name="status" class="status-select">
-                                    <option value="Pending" <?php echo $order["status"] === "Pending" ? "selected": "";?>>
+                                    <option
+                                        value="Pending"
+                                        <?php
+                                        echo $order["status"] === "Pending"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Pending
                                     </option>
 
-                                    <option value="Processing" <?php echo $order["status"] === "Processing" ? "selected": "";?>>
+                                    <option
+                                        value="Processing"
+                                        <?php
+                                        echo $order["status"] === "Processing"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Processing
                                     </option>
 
-                                    <option value="Shipped" <?php echo $order["status"] === "Shipped" ? "selected": "";?>>
+                                    <option
+                                        value="Shipped"
+                                        <?php
+                                        echo $order["status"] === "Shipped"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Shipped
                                     </option>
 
-                                    <option value="Delivered" <?php echo $order["status"] === "Delivered" ? "selected": "";?>>
+                                    <option
+                                        value="Delivered"
+                                        <?php
+                                        echo $order["status"] === "Delivered"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Delivered
                                     </option>
 
-                                    <option value="Cancelled" <?php echo $order["status"] === "Cancelled" ? "selected": "";?>>
+                                    <option
+                                        value="Cancelled"
+                                        <?php
+                                        echo $order["status"] === "Cancelled"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Cancelled
                                     </option>
                                 </select>
-                                <button type="submit" name="update_order_status">Update</button>
+
+                                <button type="submit" name="update_order_status">
+                                    Update
+                                </button>
                             </form>
                         </td>
 
                         <td>
+                            <?php
+                            echo htmlspecialchars(
+                                $order["email"]
+                            );
+                            ?>
+                        </td>
+
+                        <td>
+                            <?php
+                            echo htmlspecialchars(
+                                $order["phone"]
+                            );
+                            ?>
+                        </td>
+
+                        <td>
+                            <?php
+                            echo htmlspecialchars(
+                                $order["delivery_address"]
+                            );
+                            ?>
+                        </td>
+
+                        <td>
                             <?php if (!empty($order["payment_method"])): ?>
-                                <?php echo htmlspecialchars(ucfirst($order["payment_method"]));?>
+                                <?php
+                                echo htmlspecialchars(
+                                    ucfirst(
+                                        $order["payment_method"]
+                                    )
+                                );
+                                ?>
                             <?php else: ?>
                                 N/A
                             <?php endif; ?>
@@ -200,7 +321,11 @@ $orders = mysqli_query($conn, $sql);
 
                         <td>
                             <span class="payment-status <?php echo strtolower($order["payment_status"]); ?>">
-                                <?php echo htmlspecialchars($order["payment_status"]);?>
+                                <?php
+                                echo htmlspecialchars(
+                                    $order["payment_status"]
+                                );
+                                ?>
                             </span>
                         </td>
 
@@ -208,41 +333,70 @@ $orders = mysqli_query($conn, $sql);
                             <form method="POST" action="orders.php" class="payment-form">
                                 <input type="hidden" name="order_id" value="<?php echo (int) $order["id"]; ?>">
                                 <select name="payment_status" class="payment-select">
-                                    <option value="Pending" <?php echo $order["payment_status"] === "Pending"? "selected": "";?>>
+                                    <option value="Pending"
+                                        <?php
+                                        echo $order["payment_status"] === "Pending"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Pending
                                     </option>
 
-                                    <option value="Paid" <?php echo $order["payment_status"] === "Paid" ? "selected": "";?>>
+                                    <option value="Paid"
+                                        <?php
+                                        echo $order["payment_status"] === "Paid"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Paid
                                     </option>
 
-                                    <option value="Failed" <?php echo $order["payment_status"] === "Failed" ? "selected": "";?>>
+                                    <option value="Failed"
+                                        <?php
+                                        echo $order["payment_status"] === "Failed"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Failed
                                     </option>
 
-                                    <option value="Refunded" <?php echo $order["payment_status"] === "Refunded" ? "selected": "";?>>
+                                    <option value="Refunded"
+                                        <?php
+                                        echo $order["payment_status"] === "Refunded"
+                                            ? "selected"
+                                            : "";
+                                        ?>>
                                         Refunded
                                     </option>
                                 </select>
-                                <button type="submit" name="update_payment_status">Update</button>
+
+                                <button type="submit" name="update_payment_status">
+                                    Update
+                                </button>
                             </form>
                         </td>
 
                         <td>
                             <?php if (!empty($order["transaction_id"])): ?>
                                 <span class="transaction-id">
-                                    <?php echo htmlspecialchars($order["transaction_id"]);?>
+                                    <?php
+                                    echo htmlspecialchars(
+                                        $order["transaction_id"]
+                                    );
+                                    ?>
                                 </span>
                             <?php else: ?>
-                                <span class="no-transaction">N/A</span>
+                                <span class="no-transaction">
+                                    N/A
+                                </span>
                             <?php endif; ?>
                         </td>
 
                         <td>
                             <form method="POST" action="orders.php" class="delete-form">
                                 <input type="hidden" name="order_id" value="<?php echo (int) $order["id"]; ?>">
-
-                                <button type="submit" name="delete_order" class="delete-btn" onclick="return confirm('Are you sure you want to delete this order? This action cannot be undone.');">
+                                <button type="submit" name="delete_order" class="delete-btn"
+                                    onclick="return confirm('Are you sure you want to delete this order? This action cannot be undone.');">
                                     Delete
                                 </button>
                             </form>
@@ -251,13 +405,19 @@ $orders = mysqli_query($conn, $sql);
                 <?php endwhile; ?>
                 </tbody>
             </table>
-        <?php else: ?>
-            <div class="empty">
-                <h3>No Orders Found</h3>
-                <p>There are currently no customer orders.</p>
-            </div>
-        <?php endif; ?>
-    </section>
+        </div>
+    <?php else: ?>
+
+        <div class="empty">
+            <h3>
+                No Orders Found
+            </h3>
+            <p>
+                There are currently no customer orders.
+            </p>
+        </div>
+    <?php endif; ?>
+</section>
 </main>
 </body>
 </html>
