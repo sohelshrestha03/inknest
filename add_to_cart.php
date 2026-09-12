@@ -12,12 +12,15 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 $userId = (int) $_SESSION["user_id"];
+
 $productId = isset($_POST["product_id"])
     ? (int) $_POST["product_id"]
     : 0;
+
 $quantity = isset($_POST["quantity"])
     ? (int) $_POST["quantity"]
     : 1;
+
 
 if ($productId <= 0) {
     echo json_encode([
@@ -42,7 +45,9 @@ try {
     );
 
     if (!$productSql) {
-        throw new Exception("Could not prepare product query.");
+        throw new Exception(
+            "Could not prepare product query."
+        );
     }
 
     mysqli_stmt_bind_param(
@@ -53,54 +58,39 @@ try {
 
     if (!mysqli_stmt_execute($productSql)) {
         mysqli_stmt_close($productSql);
-        throw new Exception("Could not check product stock.");
+        throw new Exception(
+            "Could not check product stock."
+        );
     }
 
-    $productResult = mysqli_stmt_get_result($productSql);
+    $productResult=mysqli_stmt_get_result(
+            $productSql
+        );
 
-    if (!$productResult || mysqli_num_rows($productResult) === 0) {
+
+    if (!$productResult ||mysqli_num_rows($productResult) === 0) {
         mysqli_stmt_close($productSql);
-        throw new Exception("Product not found.");
+        throw new Exception(
+            "Product not found."
+        );
     }
 
-    $product = mysqli_fetch_assoc($productResult);
-    $currentStock = (int) $product["stock"];
-    $productName = $product["product_name"];
+    $product =
+        mysqli_fetch_assoc(
+            $productResult
+        );
 
+    $currentStock=(int) $product["stock"];
+    $productName=$product["product_name"];
     mysqli_stmt_close($productSql);
 
     if ($currentStock < $quantity) {
         throw new Exception(
-            "Only " . $currentStock . " item(s) available."
+            "Only "
+            . $currentStock
+            . " item(s) available."
         );
     }
-
-
-    $newStock = $currentStock - $quantity;
-    $updateStockSql = mysqli_prepare(
-        $conn,
-        "UPDATE products
-         SET stock = ?
-         WHERE id = ?"
-    );
-
-    if (!$updateStockSql) {
-        throw new Exception("Could not prepare stock update.");
-    }
-
-    mysqli_stmt_bind_param(
-        $updateStockSql,
-        "ii",
-        $newStock,
-        $productId
-    );
-
-    if (!mysqli_stmt_execute($updateStockSql)) {
-        mysqli_stmt_close($updateStockSql);
-        throw new Exception("Could not update product stock.");
-    }
-
-    mysqli_stmt_close($updateStockSql);
     $activityType = "Added to Cart";
     $activitySql = mysqli_prepare(
         $conn,
@@ -124,21 +114,23 @@ try {
     );
 
     if (!mysqli_stmt_execute($activitySql)) {
-        mysqli_stmt_close($activitySql);
+        mysqli_stmt_close(
+            $activitySql
+        );
         throw new Exception(
             "Could not record product activity."
         );
     }
-
-    mysqli_stmt_close($activitySql);
-
+    mysqli_stmt_close(
+        $activitySql
+    );
     mysqli_commit($conn);
     echo json_encode([
         "success" => true,
         "message" => $productName . " added to cart.",
         "product_id" => $productId,
         "quantity" => $quantity,
-        "stock" => $newStock
+        "stock" => $currentStock
     ]);
     exit();
 } catch (Exception $e) {

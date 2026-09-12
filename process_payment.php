@@ -20,16 +20,14 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 }
 
 $paymentMethod = $_POST["payment_method"] ?? "";
-$allowedMethods = [
-    "esewa",
-    "cash"
-];
+$allowedMethods = ["esewa","cash"];
 
 if (!in_array($paymentMethod, $allowedMethods, true)) {
     die("Invalid payment method.");
 }
-$email = trim($_POST["email"] ?? "");
-$phone = trim($_POST["phone"] ?? "");
+
+$email=trim($_POST["email"] ?? "");
+$phone=trim($_POST["phone"] ?? "");
 $deliveryAddress = trim($_POST["delivery_address"] ?? "");
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -37,6 +35,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 $phoneDigits = preg_replace("/\D/", "", $phone);
+
 if (strlen($phoneDigits) < 10) {
     die("Invalid phone number.");
 }
@@ -44,11 +43,15 @@ if (strlen($phoneDigits) < 10) {
 if (strlen($deliveryAddress) < 5) {
     die("Invalid delivery address.");
 }
+
 $cartJson = $_POST["cart"] ?? "";
+
 if (empty($cartJson)) {
     die("Cart is empty.");
 }
+
 $cart = json_decode($cartJson, true);
+
 if (!is_array($cart) || empty($cart)) {
     die("Invalid cart data.");
 }
@@ -86,7 +89,8 @@ $sql = "
     SELECT
         id,
         product_name,
-        price
+        price,
+        stock
     FROM products
     WHERE id IN ($placeholders)
 ";
@@ -97,10 +101,7 @@ $stmt = mysqli_prepare(
 );
 
 if (!$stmt) {
-    die(
-        "Product query failed: " .
-        mysqli_error($conn)
-    );
+    die("Product query failed: " .mysqli_error($conn));
 }
 
 $types = str_repeat(
@@ -127,14 +128,17 @@ mysqli_stmt_bind_result(
     $stmt,
     $productId,
     $productName,
-    $productPrice
+    $productPrice,
+    $productStock
 );
+
 $products = [];
 while (mysqli_stmt_fetch($stmt)) {
     $products[$productId] = [
         "id" => $productId,
         "product_name" => $productName,
-        "price" => $productPrice
+        "price" => $productPrice,
+        "stock" => $productStock
     ];
 }
 
@@ -144,20 +148,42 @@ if (empty($products)) {
     die("No valid products found.");
 }
 
+$cartQuantities = [];
+
+foreach ($cleanCart as $cartProductId) {
+    $cartProductId = (int) $cartProductId;
+    if (!isset($cartQuantities[$cartProductId])) {
+        $cartQuantities[$cartProductId] = 0;
+    }
+    $cartQuantities[$cartProductId]++;
+}
+
 $subtotal = 0;
-
-foreach ($products as $productId => $product) {
-    $quantity = 0;
-    foreach ($cleanCart as $cartId) {
-        if ((int) $cartId === (int) $productId) {
-            $quantity++;
-        }
+foreach ($cartQuantities as $cartProductId => $quantity) {
+    if (!isset($products[$cartProductId])) {
+        die(
+            "Product ID " .
+            $cartProductId .
+            " was not found."
+        );
     }
-
-    if ($quantity > 0) {
-        $price = (float) $product["price"];
-        $subtotal += $price * $quantity;
+    $product = $products[$cartProductId];
+    $availableStock = (int) $product["stock"];
+    if ($quantity > $availableStock) {
+        die(
+            "Not enough stock for " .
+            htmlspecialchars(
+                $product["product_name"]
+            ) .
+            ". Available stock: " .
+            $availableStock .
+            ", requested: " .
+            $quantity .
+            "."
+        );
     }
+    $price = (float) $product["price"];
+    $subtotal += $price * $quantity;
 }
 
 if ($subtotal <= 0) {
@@ -193,19 +219,16 @@ try {
             NULL
         )
     ";
-
     $stmt = mysqli_prepare(
         $conn,
         $orderSql
     );
-
     if (!$stmt) {
         throw new Exception(
             "Order query failed: " .
             mysqli_error($conn)
         );
     }
-
     mysqli_stmt_bind_param(
         $stmt,
         "isssds",
@@ -263,20 +286,12 @@ try {
         );
     }
 
-    foreach ($products as $productId => $product) {
-        $quantity = 0;
-        foreach ($cleanCart as $cartId) {
-            if ((int) $cartId === (int) $productId) {
-                $quantity++;
-            }
-        }
-
+    foreach ($cartQuantities as $productId => $quantity) {
         if ($quantity <= 0) {
             continue;
         }
-
         $productId = (int) $productId;
-        $price = (float) $product["price"];
+        $price = (float) $products[$productId]["price"];
         mysqli_stmt_bind_param(
             $itemStmt,
             "iiid",
@@ -295,7 +310,6 @@ try {
             );
         }
     }
-
     mysqli_stmt_close($itemStmt);
     $activityType = "Checkout";
     $activitySql = "
@@ -325,15 +339,12 @@ try {
         );
     }
 
-    $activityProductIds = array_unique(
-        $cleanCart
-    );
-
-    foreach ($activityProductIds as $cartProductId) {
+    foreach ($cartQuantities as $cartProductId => $quantity) {
         $cartProductId = (int) $cartProductId;
         if ($cartProductId <= 0) {
             continue;
         }
+
         mysqli_stmt_bind_param(
             $activityStmt,
             "iis",
@@ -351,7 +362,6 @@ try {
             );
         }
     }
-
     mysqli_stmt_close($activityStmt);
     mysqli_commit($conn);
 } catch (Exception $e) {
@@ -366,20 +376,20 @@ try {
 
 if ($paymentMethod === "cash") {
     header(
-        "Location: payment_success.php"
-        . "?method=cash"
-        . "&order_id="
-        . $orderId
+        "Location: payment_success.php" .
+        "?method=cash" .
+        "&order_id=" .
+        $orderId
     );
     exit();
 }
 
 if ($paymentMethod === "esewa") {
     $transactionUuid =
-        "INK-"
-        . $orderId
-        . "-"
-        . time();
+        "INK-" .
+        $orderId .
+        "-" .
+        time();
 
     $sql = "
         UPDATE orders
@@ -387,7 +397,6 @@ if ($paymentMethod === "esewa") {
         WHERE id = ?
         AND user_id = ?
     ";
-
     $stmt = mysqli_prepare(
         $conn,
         $sql
@@ -417,14 +426,12 @@ if ($paymentMethod === "esewa") {
         );
     }
     mysqli_stmt_close($stmt);
-
     $amount = number_format(
         $subtotal,
         2,
         ".",
         ""
     );
-
     $taxAmount = "0";
     $productServiceCharge = "0";
     $productDeliveryCharge =
@@ -434,7 +441,6 @@ if ($paymentMethod === "esewa") {
             ".",
             ""
         );
-
     $totalAmountFormatted =
         number_format(
             $totalAmount,
@@ -443,14 +449,14 @@ if ($paymentMethod === "esewa") {
             ""
         );
 
-    $signedFieldNames ="total_amount,transaction_uuid,product_code";
+    $signedFieldNames="total_amount,transaction_uuid,product_code";
     $signatureMessage =
-        "total_amount="
-        . $totalAmountFormatted
-        . ",transaction_uuid="
-        . $transactionUuid
-        . ",product_code="
-        . $esewaProductCode;
+        "total_amount=" .
+        $totalAmountFormatted .
+        ",transaction_uuid=" .
+        $transactionUuid .
+        ",product_code=" .
+        $esewaProductCode;
     $signature = base64_encode(
         hash_hmac(
             "sha256",
@@ -459,48 +465,51 @@ if ($paymentMethod === "esewa") {
             true
         )
     );
+
     $successUrl=$baseUrl ."/payment_success.php";
-    $failureUrl=$baseUrl ."/payment_failure.php";
+    $failureUrl =$baseUrl ."/payment_failure.php";
 ?>
 
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>
-            Redirecting to eSewa | Inknest
-        </title>
-        <link rel="stylesheet" href="css/process_payment.css?v=<?php echo time(); ?>">
-    </head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        Redirecting to eSewa | Inknest
+    </title>
+    <link rel="stylesheet" href="css/process_payment.css?v=<?php echo time(); ?>">
+</head>
 
-    <body>
-        <div class="loading">
-            <h2>
-                Redirecting to eSewa...
-            </h2>
-            <p>
-                Please wait while we connect you to eSewa.
-            </p>
-            <form id="esewaForm" action="<?php echo htmlspecialchars($esewaUrl); ?>" method="POST">
-                <input type="hidden" name="amount" value="<?php echo htmlspecialchars($amount); ?>">
-                <input type="hidden" name="tax_amount" value="<?php echo htmlspecialchars($taxAmount); ?>">
-                <input type="hidden" name="total_amount" value="<?php echo htmlspecialchars($totalAmountFormatted); ?>">
-                <input type="hidden" name="transaction_uuid" value="<?php echo htmlspecialchars($transactionUuid); ?>">
-                <input type="hidden" name="product_code" value="<?php echo htmlspecialchars($esewaProductCode); ?>">
-                <input type="hidden" name="product_service_charge" value="<?php echo htmlspecialchars($productServiceCharge); ?>">
-                <input type="hidden" name="product_delivery_charge" value="<?php echo htmlspecialchars($productDeliveryCharge); ?>">
-                <input type="hidden" name="success_url" value="<?php echo htmlspecialchars($successUrl); ?>">
-                <input type="hidden" name="failure_url" value="<?php echo htmlspecialchars($failureUrl); ?>">
-                <input type="hidden" name="signed_field_names" value="<?php echo htmlspecialchars($signedFieldNames); ?>">
-                <input type="hidden" name="signature" value="<?php echo htmlspecialchars($signature); ?>">
-                <button type="submit">Continue to eSewa</button>
-            </form>
-        </div>
-        <script>document.getElementById("esewaForm").submit();</script>
-    </body>
-    </html>
-    <?php
+<body>
+    <div class="loading">
+        <h2>
+            Redirecting to eSewa...
+        </h2>
+        <p>
+            Please wait while we connect you to eSewa.
+        </p>
+        <form id="esewaForm" action="<?php echo htmlspecialchars($esewaUrl); ?>" method="POST">
+            <input type="hidden" name="amount" value="<?php echo htmlspecialchars($amount); ?>">
+            <input type="hidden" name="tax_amount" value="<?php echo htmlspecialchars($taxAmount); ?>">
+            <input type="hidden" name="total_amount" value="<?php echo htmlspecialchars($totalAmountFormatted); ?>">
+            <input type="hidden" name="transaction_uuid" value="<?php echo htmlspecialchars($transactionUuid); ?>">
+            <input type="hidden" name="product_code" value="<?php echo htmlspecialchars($esewaProductCode); ?>">
+            <input type="hidden" name="product_service_charge" value="<?php echo htmlspecialchars($productServiceCharge); ?>">
+            <input type="hidden" name="product_delivery_charge" value="<?php echo htmlspecialchars($productDeliveryCharge); ?>">
+            <input type="hidden" name="success_url" value="<?php echo htmlspecialchars($successUrl); ?>">
+            <input type="hidden" name="failure_url" value="<?php echo htmlspecialchars($failureUrl); ?>">
+            <input type="hidden" name="signed_field_names" value="<?php echo htmlspecialchars($signedFieldNames); ?>">
+            <input type="hidden" name="signature" value="<?php echo htmlspecialchars($signature); ?>">
+            <button type="submit">Continue to eSewa</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById("esewaForm").submit();
+    </script>
+</body>
+</html>
+<?php
     exit();
 }
 ?>
