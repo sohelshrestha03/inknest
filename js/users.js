@@ -1,24 +1,60 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const deleteButtons = document.querySelectorAll(".delete-user");
+    const deleteAccountForm =document.getElementById("deleteAccountForm");
 
-    deleteButtons.forEach(function (button) {
-        button.addEventListener("click", function (event) {
-            const confirmDelete = confirm("Are you sure you want to delete this user?");
-
-            if (!confirmDelete) {
-                event.preventDefault();
+    if (deleteAccountForm) {
+        deleteAccountForm.addEventListener(
+            "submit",
+            function (event) {
+                const confirmed = confirm("Are you sure you want to permanently delete your Inknest account? This action cannot be undone.");
+                if (!confirmed) {
+                    event.preventDefault();
+                }
             }
-        });
-    });
+        );
+    }
+    const deleteButtons =
+        document.querySelectorAll(
+            ".delete-user"
+        );
 
-    const logout = document.querySelector('a[href="admin_logout.php"]');
+    deleteButtons.forEach(
+        function (button) {
+            button.addEventListener(
+                "click",
+                function (event) {
+                    const confirmed =
+                        confirm(
+                            "Are you sure you want to delete this user?"
+                        );
+
+                    if (!confirmed) {
+                        event.preventDefault();
+                    }
+                }
+            );
+
+        }
+    );
+
+    const logout =
+        document.querySelector(
+            'a[href="logout.php"]'
+        );
 
     if (logout) {
-        logout.addEventListener("click", function (event) {
-            const confirmLogout = confirm("Are you sure you want to logout?");
-            if (!confirmLogout) {
-                event.preventDefault();
+        logout.addEventListener(
+            "click",
+            function (event) {
+                const confirmed =
+                    confirm(
+                        "Are you sure you want to logout?"
+                    );
+
+                if (!confirmed) {
+                    event.preventDefault();
+                }
             }
-        });
+        );
     }
+
 });

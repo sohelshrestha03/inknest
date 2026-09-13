@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "config/database.php";
+require_once "config/database.php";
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
@@ -9,106 +9,267 @@ if (!isset($_SESSION["user_id"])) {
 $userId = (int) $_SESSION["user_id"];
 $error = "";
 $success = "";
-$sql = mysqli_prepare(
+$sendOtpNow = false;
+$userSql = mysqli_prepare(
     $conn,
-    "SELECT id, first_name, last_name, user_name, email, phone_no
-     FROM users
-     WHERE id = ?"
+    "
+    SELECT
+        id,
+        first_name,
+        last_name,
+        user_name,
+        email,
+        phone_no
+    FROM users
+    WHERE id = ?
+    LIMIT 1
+    "
 );
-mysqli_stmt_bind_param($sql, "i", $userId);
-mysqli_stmt_execute($sql);
-$result = mysqli_stmt_get_result($sql);
 
-if (!$result || mysqli_num_rows($result) !== 1) {
+if (!$userSql) {
     session_destroy();
     header("Location: login.php");
     exit();
 }
-$user = mysqli_fetch_assoc($result);
-$firstName = $user["first_name"];
-$lastName = $user["last_name"];
-$username = $user["user_name"];
-$email = $user["email"];
-$phone = $user["phone_no"];
+
+mysqli_stmt_bind_param(
+    $userSql,
+    "i",
+    $userId
+);
+
+if (!mysqli_stmt_execute($userSql)) {
+    mysqli_stmt_close($userSql);
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+
+mysqli_stmt_bind_result(
+    $userSql,
+    $dbUserId,
+    $firstName,
+    $lastName,
+    $username,
+    $email,
+    $phone
+);
+
+if (!mysqli_stmt_fetch($userSql)) {
+    mysqli_stmt_close($userSql);
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+
+mysqli_stmt_close($userSql);
 $profilePicture = "";
 $profileSql = mysqli_prepare(
     $conn,
-    "SELECT profile_picture
-     FROM user_profiles
-     WHERE user_id = ?"
+    "
+    SELECT profile_picture
+    FROM user_profiles
+    WHERE user_id = ?
+    LIMIT 1
+    "
 );
-mysqli_stmt_bind_param($profileSql, "i", $userId);
-mysqli_stmt_execute($profileSql);
-$profileResult = mysqli_stmt_get_result($profileSql);
 
-if ($profileResult && mysqli_num_rows($profileResult) === 1) {
-    $profileData = mysqli_fetch_assoc($profileResult);
-    $profilePicture = $profileData["profile_picture"] ?? "";
+if ($profileSql) {
+    mysqli_stmt_bind_param(
+        $profileSql,
+        "i",
+        $userId
+    );
+    if (mysqli_stmt_execute($profileSql)) {
+        mysqli_stmt_bind_result(
+            $profileSql,
+            $profilePictureValue
+        );
+        if (mysqli_stmt_fetch($profileSql)) {
+            $profilePicture =$profilePictureValue ?? "";
+        }
+    }
+    mysqli_stmt_close($profileSql);
 }
 
-if (isset($_POST["update_profile"])) {
-    $newFirstName = trim($_POST["first_name"] ?? "");
-    $newLastName = trim($_POST["last_name"] ?? "");
-    $newUsername = trim($_POST["username"] ?? "");
-    $newEmail = trim($_POST["email"] ?? "");
-    $newPhone = trim($_POST["phone"] ?? "");
-    if ($newFirstName === "" ||$newLastName === "" ||$newUsername === "" ||$newEmail === "" ||$newPhone === "") {
-        $error = "Please fill in all fields.";
-    } elseif (!preg_match("/^[A-Za-z]+$/", $newFirstName)) {
-        $error = "First name can contain letters only.";
-    } elseif (!preg_match("/^[A-Za-z]+$/", $newLastName)) {
-        $error = "Last name can contain letters only.";
-    } elseif (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-        $error = "Please enter a valid email address.";
-    } elseif (!preg_match("/^[0-9]{10}$/", $newPhone)) {
-        $error = "Phone number must contain exactly 10 digits.";
-    } else {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_profile"])) {
+    $newFirstName=trim($_POST["first_name"] ?? "");
+    $newLastName=trim($_POST["last_name"] ?? "");
+    $newUsername=trim($_POST["username"] ?? "");
+    $newEmail =
+        strtolower(
+            trim(
+                $_POST["email"] ?? ""
+            )
+        );
+    $newPhone=trim($_POST["phone"] ?? "");
+    if ($newFirstName === "" ||
+        $newLastName === "" ||
+        $newUsername === "" ||
+        $newEmail === "" ||
+        $newPhone === "") {
+        $error ="Please fill in all fields.";
+    } elseif (!preg_match("/^[A-Za-z]+$/",$newFirstName)) {
+        $error ="First name can contain letters only.";
+    } elseif (!preg_match("/^[A-Za-z]+$/",$newLastName)) {
+        $error="Last name can contain letters only.";
+    } elseif (!filter_var($newEmail,FILTER_VALIDATE_EMAIL)) {
+        $error="Please enter a valid email address.";
+    } elseif (!preg_match("/^[0-9]{10}$/",$newPhone)) {
+        $error="Phone number must contain exactly 10 digits.";
+    }
+
+    if ($error === "") {
         $checkUsername = mysqli_prepare(
             $conn,
-            "SELECT id
-             FROM users
-             WHERE user_name = ?
-             AND id != ?"
+            "
+            SELECT id
+            FROM users
+            WHERE user_name = ?
+              AND id != ?
+            LIMIT 1
+            "
         );
-        mysqli_stmt_bind_param(
-            $checkUsername,
-            "si",
-            $newUsername,
-            $userId
-        );
-        mysqli_stmt_execute($checkUsername);
-        $usernameResult = mysqli_stmt_get_result($checkUsername);
-        if ($usernameResult && mysqli_num_rows($usernameResult) > 0) {
-            $error = "Username is already taken.";
+        if (!$checkUsername) {
+            $error="Database error. Please try again.";
         } else {
-            $checkEmail = mysqli_prepare(
-                $conn,
-                "SELECT id
-                 FROM users
-                 WHERE email = ?
-                 AND id != ?"
+            mysqli_stmt_bind_param(
+                $checkUsername,
+                "si",
+                $newUsername,
+                $userId
             );
+            mysqli_stmt_execute(
+                $checkUsername
+            );
+            mysqli_stmt_bind_result(
+                $checkUsername,
+                $duplicateUsernameId
+            );
+            if (mysqli_stmt_fetch($checkUsername)) {
+                $error="Username is already taken.";
+            }
+            mysqli_stmt_close(
+                $checkUsername
+            );
+        }
+    }
+
+    if ($error === "") {
+        $checkEmail = mysqli_prepare(
+            $conn,
+            "
+            SELECT id
+            FROM users
+            WHERE email = ?
+              AND id != ?
+            LIMIT 1
+            "
+        );
+        if (!$checkEmail) {
+            $error ="Database error. Please try again.";
+        } else {
             mysqli_stmt_bind_param(
                 $checkEmail,
                 "si",
                 $newEmail,
                 $userId
             );
-            mysqli_stmt_execute($checkEmail);
-            $emailResult = mysqli_stmt_get_result($checkEmail);
-            if ($emailResult && mysqli_num_rows($emailResult) > 0) {
-                $error = "Email is already registered.";
+            mysqli_stmt_execute(
+                $checkEmail
+            );
+            mysqli_stmt_bind_result(
+                $checkEmail,
+                $duplicateEmailId
+            );
+            if (mysqli_stmt_fetch($checkEmail)) {
+                $error ="Email is already registered.";
+            }
+            mysqli_stmt_close(
+                $checkEmail
+            );
+        }
+    }
+
+    if ($error === "") {
+        $checkPhone = mysqli_prepare(
+            $conn,
+            "
+            SELECT id
+            FROM users
+            WHERE phone_no = ?
+              AND id != ?
+            LIMIT 1
+            "
+        );
+        if (!$checkPhone) {
+            $error="Database error. Please try again.";
+        } else {
+            mysqli_stmt_bind_param(
+                $checkPhone,
+                "si",
+                $newPhone,
+                $userId
+            );
+            mysqli_stmt_execute(
+                $checkPhone
+            );
+            mysqli_stmt_bind_result(
+                $checkPhone,
+                $duplicatePhoneId
+            );
+            if (mysqli_stmt_fetch($checkPhone)) {
+                $error ="Phone number is already registered.";
+            }
+            mysqli_stmt_close(
+                $checkPhone
+            );
+        }
+    }
+
+    if ($error === "") {
+        $emailChanged =$newEmail !== strtolower($email);
+        $phoneChanged =$newPhone !== $phone;
+        if ($emailChanged || $phoneChanged) {
+            if ($emailChanged) {
+                $otpPurpose ="change_email";
             } else {
-                $updateSql = mysqli_prepare(
-                    $conn,
-                    "UPDATE users
-                     SET first_name = ?,
-                         last_name = ?,
-                         user_name = ?,
-                         email = ?,
-                         phone_no = ?
-                     WHERE id = ?"
-                );
+                $otpPurpose="change_phone";
+            }
+            $_SESSION["pending_profile_update"] = [
+                "first_name" =>$newFirstName,
+                "last_name" =>$newLastName,
+                "username" =>$newUsername,
+                "email" =>$newEmail,
+                "phone" =>$newPhone
+            ];
+            $_SESSION["profile_otp_action"] ="account_update";
+            $_SESSION["profile_otp_email"] =strtolower($email);
+            $_SESSION["profile_otp_purpose"] =$otpPurpose;
+            unset(
+                $_SESSION["otp_verified"],
+                $_SESSION["otp_verified_email"],
+                $_SESSION["otp_verified_purpose"],
+                $_SESSION["otp_verified_user_id"]
+            );
+            $sendOtpNow = true;
+        } else {
+            $updateSql = mysqli_prepare(
+                $conn,
+                "
+                UPDATE users
+                SET
+                    first_name = ?,
+                    last_name = ?,
+                    user_name = ?,
+                    email = ?,
+                    phone_no = ?
+                WHERE id = ?
+                "
+            );
+            if (!$updateSql) {
+                $error ="Database error. Please try again.";
+            } else {
                 mysqli_stmt_bind_param(
                     $updateSql,
                     "sssssi",
@@ -121,151 +282,228 @@ if (isset($_POST["update_profile"])) {
                 );
 
                 if (mysqli_stmt_execute($updateSql)) {
-                    $_SESSION["username"] = $newUsername;
-                    $firstName = $newFirstName;
-                    $lastName = $newLastName;
-                    $username = $newUsername;
-                    $email = $newEmail;
-                    $phone = $newPhone;
-                    $success = "Profile updated successfully.";
+                    $_SESSION["username"] =$newUsername;
+                    $firstName =$newFirstName;
+                    $lastName =$newLastName;
+                    $username =$newUsername;
+                    $email =$newEmail;
+                    $phone =$newPhone;
+                    $success ="Profile updated successfully.";
                 } else {
-                    $error = "Failed to update profile.";
+                    $error ="Failed to update profile.";
                 }
+                mysqli_stmt_close(
+                    $updateSql
+                );
             }
         }
     }
 }
 
-if (isset($_POST["upload_picture"])) {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["upload_picture"])) {
     if (!isset($_FILES["profile_picture"])) {
-        $error = "Please select an image.";
+        $error ="Please select an image.";
     } else {
-        $file = $_FILES["profile_picture"];
-        if ($file["error"] !== UPLOAD_ERR_OK) {
-            $error = "There was an error uploading the image.";
-        } elseif ($file["size"] > 5 * 1024 * 1024) {
-            $error = "Image size must be less than 5 MB.";
+        $file =$_FILES["profile_picture"];
+        if ($file["error"] !==UPLOAD_ERR_OK) {
+            $error ="There was an error uploading the image.";
+        } elseif (
+            $file["size"] >
+            5 * 1024 * 1024
+        ) {
+            $error ="Image size must be less than 5 MB.";
         } else {
-            $imageInfo = getimagesize($file["tmp_name"]);
-            if ($imageInfo === false) {
-                $error = "The uploaded file is not a valid image.";
-            } else {
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mimeType = finfo_file(
-                    $finfo,
+            $imageInfo =
+                getimagesize(
                     $file["tmp_name"]
                 );
-                finfo_close($finfo);
+
+            if ($imageInfo === false) {
+                $error ="The uploaded file is not a valid image.";
+            } else {
+                $finfo =finfo_open(
+                        FILEINFO_MIME_TYPE
+                    );
+                $mimeType =finfo_file(
+                        $finfo,
+                        $file["tmp_name"]
+                    );
+                finfo_close(
+                    $finfo
+                );
                 $allowedTypes = [
-                    "image/jpeg" => "jpg",
-                    "image/png"  => "png",
-                    "image/webp" => "webp"
+                    "image/jpeg" =>"jpg",
+                    "image/png" =>"png",
+                    "image/webp" =>"webp"
                 ];
 
-                if (!array_key_exists($mimeType, $allowedTypes)) {
-                    $error = "Only JPG, PNG, and WEBP images are allowed.";
+                if (!isset($allowedTypes[$mimeType])) {
+                    $error ="Only JPG, PNG, and WEBP images are allowed.";
                 } else {
-                    $extension = $allowedTypes[$mimeType];
-                    $uploadDirectory = "images/profile/";
+                    $extension =$allowedTypes[$mimeType];
+                    $uploadDirectory ="images/profile/";
                     if (!is_dir($uploadDirectory)) {
-                        mkdir($uploadDirectory, 0755, true);
+                        mkdir(
+                            $uploadDirectory,
+                            0755,
+                            true
+                        );
                     }
                     $newFileName =
                         "profile_" .
                         $userId .
                         "_" .
-                        bin2hex(random_bytes(8)) .
+                        bin2hex(
+                            random_bytes(8)
+                        ) .
                         "." .
                         $extension;
-                    $destination =
-                        $uploadDirectory .
-                        $newFileName;
+                    $destination =$uploadDirectory .$newFileName;
 
-                    if (move_uploaded_file(
-                        $file["tmp_name"],
-                        $destination
-                    )) {
+                    if (move_uploaded_file($file["tmp_name"],$destination)) {
                         $oldPicture = "";
-                        $oldSql = mysqli_prepare(
-                            $conn,
-                            "SELECT profile_picture
-                             FROM user_profiles
-                             WHERE user_id = ?"
-                        );
-                        mysqli_stmt_bind_param(
-                            $oldSql,
-                            "i",
-                            $userId
-                        );
-                        mysqli_stmt_execute($oldSql);
-                        $oldResult = mysqli_stmt_get_result($oldSql);
-
-                        if ($oldResult && mysqli_num_rows($oldResult) === 1) {
-                            $oldData=mysqli_fetch_assoc($oldResult);
-                            $oldPicture =$oldData["profile_picture"] ?? "";
-                        }
-                        $checkProfile = mysqli_prepare(
-                            $conn,
-                            "SELECT id
-                             FROM user_profiles
-                             WHERE user_id = ?"
-                        );
-                        mysqli_stmt_bind_param(
-                            $checkProfile,
-                            "i",
-                            $userId
-                        );
-                        mysqli_stmt_execute($checkProfile);
-                        $checkResult=mysqli_stmt_get_result($checkProfile);
-                        if ($checkResult && mysqli_num_rows($checkResult) === 1) {
-                            $updatePicture = mysqli_prepare(
+                        $oldSql =
+                            mysqli_prepare(
                                 $conn,
-                                "UPDATE user_profiles
-                                 SET profile_picture = ?
-                                 WHERE user_id = ?"
+                                "
+                                SELECT profile_picture
+                                FROM user_profiles
+                                WHERE user_id = ?
+                                LIMIT 1
+                                "
                             );
+
+                        if ($oldSql) {
                             mysqli_stmt_bind_param(
-                                $updatePicture,
-                                "si",
-                                $newFileName,
+                                $oldSql,
+                                "i",
                                 $userId
                             );
+                            mysqli_stmt_execute(
+                                $oldSql
+                            );
+                            mysqli_stmt_bind_result(
+                                $oldSql,
+                                $oldPictureValue
+                            );
 
-                            $dbSuccess=mysqli_stmt_execute($updatePicture);
-                        } else {
-                            $insertPicture = mysqli_prepare(
+                            if (mysqli_stmt_fetch($oldSql)) {
+                                $oldPicture =$oldPictureValue ?? "";
+                            }
+                            mysqli_stmt_close(
+                                $oldSql
+                            );
+                        }
+
+                        $checkProfile =
+                            mysqli_prepare(
                                 $conn,
-                                "INSERT INTO user_profiles
-                                 (user_id, profile_picture)
-                                 VALUES (?, ?)"
+                                "
+                                SELECT id
+                                FROM user_profiles
+                                WHERE user_id = ?
+                                LIMIT 1
+                                "
                             );
+                        $profileExists =false;
+
+                        if ($checkProfile) {
                             mysqli_stmt_bind_param(
-                                $insertPicture,
-                                "is",
-                                $userId,
-                                $newFileName
+                                $checkProfile,
+                                "i",
+                                $userId
                             );
-                            $dbSuccess =mysqli_stmt_execute($insertPicture);
+                            mysqli_stmt_execute(
+                                $checkProfile
+                            );
+                            mysqli_stmt_bind_result(
+                                $checkProfile,
+                                $profileId
+                            );
+                            $profileExists =
+                                mysqli_stmt_fetch(
+                                    $checkProfile
+                                );
+                            mysqli_stmt_close(
+                                $checkProfile
+                            );
+                        }
+                        $dbSuccess = false;
+
+                        if ($profileExists) {
+                            $updatePicture =
+                                mysqli_prepare(
+                                    $conn,
+                                    "
+                                    UPDATE user_profiles
+                                    SET profile_picture = ?
+                                    WHERE user_id = ?
+                                    "
+                                );
+
+                            if ($updatePicture) {
+                                mysqli_stmt_bind_param(
+                                    $updatePicture,
+                                    "si",
+                                    $newFileName,
+                                    $userId
+                                );
+
+                                $dbSuccess =mysqli_stmt_execute($updatePicture);
+                                mysqli_stmt_close(
+                                    $updatePicture
+                                );
+                            }
+                        } else {
+                            $insertPicture =mysqli_prepare(
+                                    $conn,
+                                    "
+                                    INSERT INTO user_profiles
+                                    (
+                                        user_id,
+                                        profile_picture
+                                    )
+                                    VALUES (?, ?)
+                                    "
+                                );
+
+                            if ($insertPicture) {
+                                mysqli_stmt_bind_param(
+                                    $insertPicture,
+                                    "is",
+                                    $userId,
+                                    $newFileName
+                                );
+                                $dbSuccess =mysqli_stmt_execute(
+                                        $insertPicture
+                                    );
+                                mysqli_stmt_close(
+                                    $insertPicture
+                                );
+                            }
                         }
 
                         if ($dbSuccess) {
                             if ($oldPicture !== "") {
-                                $oldFile = $uploadDirectory .
-                                    basename($oldPicture);
+                                $oldFile =$uploadDirectory .
+                                    basename(
+                                        $oldPicture
+                                    );
+                                    
                                 if (file_exists($oldFile) && is_file($oldFile)) {
                                     unlink($oldFile);
                                 }
                             }
-                            $profilePicture = $newFileName;
+                            $profilePicture =$newFileName;
                             $success ="Profile picture updated successfully.";
                         } else {
                             if (file_exists($destination)) {
                                 unlink($destination);
                             }
-                            $error ="Failed to save profile picture.";
+                            $error="Failed to save profile picture.";
                         }
                     } else {
-                        $error ="Failed to upload profile picture.";
+                        $error="Failed to upload profile picture.";
                     }
                 }
             }
@@ -273,107 +511,906 @@ if (isset($_POST["upload_picture"])) {
     }
 }
 
-if (isset($_POST["delete_picture"])) {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_picture"])) {
+    $pictureToDelete = "";
     $deleteSql = mysqli_prepare(
         $conn,
-        "SELECT profile_picture
-         FROM user_profiles
-         WHERE user_id = ?"
+        "
+        SELECT profile_picture
+        FROM user_profiles
+        WHERE user_id = ?
+        LIMIT 1
+        "
     );
-    mysqli_stmt_bind_param(
-        $deleteSql,
-        "i",
-        $userId
-    );
-    mysqli_stmt_execute($deleteSql);
-    $deleteResult =mysqli_stmt_get_result($deleteSql);
-    $pictureToDelete = "";
-    if ($deleteResult && mysqli_num_rows($deleteResult) === 1) {
-        $deleteData =mysqli_fetch_assoc($deleteResult);
-        $pictureToDelete =$deleteData["profile_picture"] ?? "";
+
+    if ($deleteSql) {
+        mysqli_stmt_bind_param(
+            $deleteSql,
+            "i",
+            $userId
+        );
+        mysqli_stmt_execute(
+            $deleteSql
+        );
+        mysqli_stmt_bind_result(
+            $deleteSql,
+            $pictureValue
+        );
+
+        if (mysqli_stmt_fetch($deleteSql)) {
+            $pictureToDelete =$pictureValue ?? "";
+        }
+        mysqli_stmt_close(
+            $deleteSql
+        );
     }
     $removeSql = mysqli_prepare(
         $conn,
-        "DELETE FROM user_profiles
-         WHERE user_id = ?"
+        "
+        DELETE FROM user_profiles
+        WHERE user_id = ?
+        "
     );
-    mysqli_stmt_bind_param(
-        $removeSql,
-        "i",
-        $userId
-    );
-    if (mysqli_stmt_execute($removeSql)) {
-        if ($pictureToDelete !== "") {
-            $picturePath ="images/profile/" .basename($pictureToDelete);
-            if (file_exists($picturePath) && is_file($picturePath)) {
-                unlink($picturePath);
-            }
-        }
-        $profilePicture = "";
-        $success ="Profile picture deleted successfully.";
-    } else {
+
+    if (!$removeSql) {
         $error="Failed to delete profile picture.";
+    } else {
+        mysqli_stmt_bind_param(
+            $removeSql,
+            "i",
+            $userId
+        );
+
+        if (mysqli_stmt_execute($removeSql)) {
+            mysqli_stmt_close(
+                $removeSql
+            );
+
+            if ($pictureToDelete !== "") {
+                $picturePath ="images/profile/" .basename($pictureToDelete);
+                if (file_exists($picturePath) && is_file($picturePath)) {
+                    unlink($picturePath);
+                }
+            }
+            $profilePicture = "";
+            $success ="Profile picture deleted successfully.";
+        } else {
+            mysqli_stmt_close(
+                $removeSql
+            );
+            $error="Failed to delete profile picture.";
+        }
     }
 }
 
-if (isset($_POST["change_password"])) {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["change_password"])) {
     $currentPassword =$_POST["current_password"] ?? "";
     $newPassword =$_POST["new_password"] ?? "";
     $confirmPassword =$_POST["confirm_password"] ?? "";
 
-    if ($currentPassword === "" ||$newPassword === "" ||$confirmPassword === "") {
+    if ($currentPassword === "" || $newPassword === "" || $confirmPassword === "") {
         $error ="Please fill in all password fields.";
     } elseif (strlen($newPassword) < 8) {
         $error ="New password must be at least 8 characters.";
     } elseif ($newPassword !== $confirmPassword) {
         $error ="New passwords do not match.";
     } else {
-        $passwordSql = mysqli_prepare(
-            $conn,
-            "SELECT new_Password
-             FROM users
-             WHERE id = ?"
-        );
-        mysqli_stmt_bind_param(
-            $passwordSql,
-            "i",
-            $userId
-        );
-        mysqli_stmt_execute($passwordSql);
-        $passwordResult =mysqli_stmt_get_result($passwordSql);
-        $passwordData =mysqli_fetch_assoc($passwordResult);
-        $storedPassword =$passwordData["new_Password"] ?? "";
-
-        if (!password_verify($currentPassword,$storedPassword)) {
-            $error ="Current password is incorrect.";
-        } else {
-            $hashedPassword =password_hash($newPassword,PASSWORD_DEFAULT);
-            $updatePassword = mysqli_prepare(
+        $passwordSql =
+            mysqli_prepare(
                 $conn,
-                "UPDATE users
-                 SET new_Password = ?,
-                     confirm_Password = ?
-                 WHERE id = ?"
+                "
+                SELECT new_Password
+                FROM users
+                WHERE id = ?
+                LIMIT 1
+                "
             );
+
+        if (!$passwordSql) {
+            $error="Unable to verify current password.";
+
+        } else {
             mysqli_stmt_bind_param(
-                $updatePassword,
-                "ssi",
-                $hashedPassword,
-                $hashedPassword,
+                $passwordSql,
+                "i",
                 $userId
             );
-            if (mysqli_stmt_execute($updatePassword)) {
-                $success="Password changed successfully.";
+
+            mysqli_stmt_execute(
+                $passwordSql
+            );
+            mysqli_stmt_bind_result(
+                $passwordSql,
+                $storedPassword
+            );
+            if (!mysqli_stmt_fetch($passwordSql)) {
+                $storedPassword = "";
+            }
+            mysqli_stmt_close(
+                $passwordSql
+            );
+
+            if (!password_verify(
+                    $currentPassword,
+                    $storedPassword
+                )
+            ) {
+                $error ="Current password is incorrect.";
             } else {
-                $error ="Failed to change password.";
+                $_SESSION["pending_password_hash"] =
+                    password_hash(
+                        $newPassword,
+                        PASSWORD_DEFAULT
+                    );
+                $_SESSION["profile_otp_action"] ="change_password";
+                $_SESSION["profile_otp_email"] =strtolower($email);
+                $_SESSION["profile_otp_purpose"] ="change_password";
+                unset(
+                    $_SESSION["otp_verified"],
+                    $_SESSION["otp_verified_email"],
+                    $_SESSION["otp_verified_purpose"],
+                    $_SESSION["otp_verified_user_id"]
+                );
+                $sendOtpNow = true;
+            }
+        }
+    }
+}
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["complete_otp_update"])) {
+    $sessionOtpEmail = strtolower(
+            trim(
+                $_SESSION["profile_otp_email"] ?? ""
+            )
+        );
+
+    $verifiedOtpEmail =strtolower(
+            trim(
+                $_SESSION["otp_verified_email"] ?? ""
+            )
+        );
+    $otpIsVerified =isset(
+            $_SESSION["otp_verified"],
+            $_SESSION["otp_verified_email"],
+            $_SESSION["otp_verified_purpose"]
+        ) &&
+        $_SESSION["otp_verified"] === true &&
+        $sessionOtpEmail !== "" &&
+        $verifiedOtpEmail === $sessionOtpEmail;
+
+    if (!$otpIsVerified) {
+        $error = "Please verify the OTP first.";
+    } else {
+        $action =$_SESSION["profile_otp_action"] ?? "";
+        if ($action === "change_password") {
+            if (!isset($_SESSION["pending_password_hash"])) {
+                $error ="Password reset session expired. Please try again.";
+            } else {
+                $hashedPassword =$_SESSION["pending_password_hash"];
+                $updatePassword =
+                    mysqli_prepare(
+                        $conn,
+                        "
+                        UPDATE users
+                        SET
+                            new_Password = ?,
+                            confirm_Password = ?
+                        WHERE id = ?
+                        "
+                    );
+
+                if (!$updatePassword) {
+                    $error ="Failed to change password.";
+                } else {
+                    mysqli_stmt_bind_param(
+                        $updatePassword,
+                        "ssi",
+                        $hashedPassword,
+                        $hashedPassword,
+                        $userId
+                    );
+                    if (mysqli_stmt_execute( $updatePassword)) {
+                        $success ="Password changed successfully.";
+                        unset(
+                            $_SESSION["pending_password_hash"]
+                        );
+                    } else {
+                        $error ="Failed to change password.";
+                    }
+                    mysqli_stmt_close(
+                        $updatePassword
+                    );
+                }
+            }
+        }
+        elseif ($action === "account_update") {
+            $pending =$_SESSION["pending_profile_update"] ?? null;
+
+            if (!$pending) {
+                $error = "Account update session expired. Please try again.";
+            } else {
+                $pendingFirstName =trim(
+                        $pending["first_name"] ?? ""
+                    );
+
+                $pendingLastName =trim(
+                        $pending["last_name"] ?? ""
+                    );
+
+                $pendingUsername =trim(
+                        $pending["username"] ?? ""
+                    );
+
+                $pendingEmail =strtolower(
+                        trim(
+                            $pending["email"] ?? ""
+                        )
+                    );
+
+                $pendingPhone =trim(
+                        $pending["phone"] ?? ""
+                    );
+
+                $duplicateFound =false;
+
+                $checkUsername =
+                    mysqli_prepare(
+                        $conn,
+                        "
+                        SELECT id
+                        FROM users
+                        WHERE user_name = ?
+                          AND id != ?
+                        LIMIT 1
+                        "
+                    );
+
+                if (!$checkUsername) {
+                    $error ="Database error. Please try again.";
+                    $duplicateFound = true;
+                } else {
+                    mysqli_stmt_bind_param(
+                        $checkUsername,
+                        "si",
+                        $pendingUsername,
+                        $userId
+                    );
+
+                    mysqli_stmt_execute(
+                        $checkUsername
+                    );
+
+                    mysqli_stmt_bind_result(
+                        $checkUsername,
+                        $duplicateUsernameId
+                    );
+
+                    if (mysqli_stmt_fetch($checkUsername)) {
+                        $error ="Username is already taken.";
+                        $duplicateFound = true;
+                    }
+                    mysqli_stmt_close(
+                        $checkUsername
+                    );
+                }
+
+                if (!$duplicateFound) {
+                    $checkEmail =
+                        mysqli_prepare(
+                            $conn,
+                            "
+                            SELECT id
+                            FROM users
+                            WHERE email = ?
+                              AND id != ?
+                            LIMIT 1
+                            "
+                        );
+
+                    if (!$checkEmail) {
+                        $error ="Database error. Please try again.";
+                        $duplicateFound = true;
+                    } else {
+                        mysqli_stmt_bind_param(
+                            $checkEmail,
+                            "si",
+                            $pendingEmail,
+                            $userId
+                        );
+                        mysqli_stmt_execute(
+                            $checkEmail
+                        );
+                        mysqli_stmt_bind_result(
+                            $checkEmail,
+                            $duplicateEmailId
+                        );
+
+                        if (mysqli_stmt_fetch($checkEmail)) {
+                            $error ="Email is already registered.";
+                            $duplicateFound = true;
+                        }
+                        mysqli_stmt_close(
+                            $checkEmail
+                        );
+                    }
+                }
+
+                if (!$duplicateFound) {
+                    $checkPhone =
+                        mysqli_prepare(
+                            $conn,
+                            "
+                            SELECT id
+                            FROM users
+                            WHERE phone_no = ?
+                              AND id != ?
+                            LIMIT 1
+                            "
+                        );
+
+                    if (!$checkPhone) {
+                        $error ="Database error. Please try again.";
+                        $duplicateFound = true;
+                    } else {
+                        mysqli_stmt_bind_param(
+                            $checkPhone,
+                            "si",
+                            $pendingPhone,
+                            $userId
+                        );
+                        mysqli_stmt_execute(
+                            $checkPhone
+                        );
+                        mysqli_stmt_bind_result(
+                            $checkPhone,
+                            $duplicatePhoneId
+                        );
+                        if (mysqli_stmt_fetch($checkPhone)) {
+                            $error ="Phone number is already registered.";
+                            $duplicateFound = true;
+                        }
+                        mysqli_stmt_close(
+                            $checkPhone
+                        );
+                    }
+                }
+
+                if (!$duplicateFound) {
+                    $updateProfile =
+                        mysqli_prepare(
+                            $conn,
+                            "
+                            UPDATE users
+                            SET
+                                first_name = ?,
+                                last_name = ?,
+                                user_name = ?,
+                                email = ?,
+                                phone_no = ?
+                            WHERE id = ?
+                            "
+                        );
+
+                    if (!$updateProfile) {
+                        $error ="Failed to update account information.";
+                    } else {
+                        mysqli_stmt_bind_param(
+                            $updateProfile,
+                            "sssssi",
+                            $pendingFirstName,
+                            $pendingLastName,
+                            $pendingUsername,
+                            $pendingEmail,
+                            $pendingPhone,
+                            $userId
+                        );
+
+                        if (mysqli_stmt_execute($updateProfile)) {
+                            $_SESSION["username"] =$pendingUsername;
+                            $firstName =$pendingFirstName;
+                            $lastName =$pendingLastName;
+                            $username =$pendingUsername;
+                            $email =$pendingEmail;
+                            $phone =$pendingPhone;
+                            $success ="Account information updated successfully.";
+                            unset(
+                                $_SESSION["pending_profile_update"]
+                            );
+                        } else {
+                            $error ="Failed to update account information.";
+                        }
+                        mysqli_stmt_close(
+                            $updateProfile
+                        );
+                    }
+                }
+            }
+        }
+
+        if ($error === "") {
+            unset(
+                $_SESSION["otp_verified"],
+                $_SESSION["otp_verified_email"],
+                $_SESSION["otp_verified_purpose"],
+                $_SESSION["otp_verified_user_id"],
+                $_SESSION["profile_otp_action"],
+                $_SESSION["profile_otp_email"],
+                $_SESSION["profile_otp_purpose"]
+            );
+        }
+    }
+}
+
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_account"])) {
+    $deletePassword =$_POST["delete_account_password"] ?? "";
+    if ($deletePassword === "") {
+        $error ="Please enter your current password.";
+    } else {
+        $passwordCheckSql =
+            mysqli_prepare(
+                $conn,
+                "
+                SELECT new_Password
+                FROM users
+                WHERE id = ?
+                LIMIT 1
+                "
+            );
+
+        if (!$passwordCheckSql) {
+            $error ="Unable to verify your password. Please try again.";
+        } else {
+            mysqli_stmt_bind_param(
+                $passwordCheckSql,
+                "i",
+                $userId
+            );
+
+            if (!mysqli_stmt_execute(
+                    $passwordCheckSql)) {
+                mysqli_stmt_close(
+                    $passwordCheckSql
+                );
+                $error = "Unable to verify your password. Please try again.";
+            } else {
+                mysqli_stmt_bind_result(
+                    $passwordCheckSql,
+                    $storedDeletePassword
+                );
+
+
+                if (
+                    !mysqli_stmt_fetch(
+                        $passwordCheckSql
+                    )
+                ) {
+
+                    $storedDeletePassword = "";
+                }
+
+                mysqli_stmt_close(
+                    $passwordCheckSql
+                );
+
+                if (!password_verify(
+                        $deletePassword,
+                        $storedDeletePassword)) {
+                    $error ="Current password is incorrect.";
+                } else {
+                    $pictureToDelete = "";
+                    $pictureSql =
+                        mysqli_prepare(
+                            $conn,
+                            "
+                            SELECT profile_picture
+                            FROM user_profiles
+                            WHERE user_id = ?
+                            LIMIT 1
+                            "
+                        );
+
+                    if ($pictureSql) {
+                        mysqli_stmt_bind_param(
+                            $pictureSql,
+                            "i",
+                            $userId
+                        );
+                        mysqli_stmt_execute(
+                            $pictureSql
+                        );
+
+                        mysqli_stmt_bind_result(
+                            $pictureSql,
+                            $pictureValue
+                        );
+
+                        if (mysqli_stmt_fetch($pictureSql)) {
+                            $pictureToDelete =$pictureValue ?? "";
+                        }
+
+                        mysqli_stmt_close(
+                            $pictureSql
+                        );
+                    }
+                    mysqli_begin_transaction(
+                        $conn
+                    );
+                    try {
+                        $activitySql =
+                            mysqli_prepare(
+                                $conn,
+                                "
+                                DELETE FROM user_product_activity
+                                WHERE user_id = ?
+                                "
+                            );
+
+                        if (!$activitySql) {
+                            throw new Exception(
+                                "Failed to prepare activity deletion."
+                            );
+                        }
+
+                        mysqli_stmt_bind_param(
+                            $activitySql,
+                            "i",
+                            $userId
+                        );
+
+                        if (!mysqli_stmt_execute($activitySql)) {
+                            mysqli_stmt_close(
+                                $activitySql
+                            );
+                            throw new Exception(
+                                "Failed to delete activity records."
+                            );
+                        }
+
+                        mysqli_stmt_close(
+                            $activitySql
+                        );
+
+                        $reviewSql =
+                            mysqli_prepare(
+                                $conn,
+                                "
+                                DELETE FROM product_reviews
+                                WHERE user_id = ?
+                                "
+                            );
+
+                        if (!$reviewSql) {
+                            throw new Exception(
+                                "Failed to prepare review deletion."
+                            );
+                        }
+                        mysqli_stmt_bind_param(
+                            $reviewSql,
+                            "i",
+                            $userId
+                        );
+
+                        if (!mysqli_stmt_execute($reviewSql)) {
+                            mysqli_stmt_close(
+                                $reviewSql
+                            );
+                            throw new Exception(
+                                "Failed to delete review records."
+                            );
+                        }
+                        mysqli_stmt_close(
+                            $reviewSql
+                        );
+
+                        $orderIds = [];
+                        $orderSelectSql =
+                            mysqli_prepare(
+                                $conn,
+                                "
+                                SELECT id
+                                FROM orders
+                                WHERE user_id = ?
+                                "
+                            );
+
+                        if (!$orderSelectSql) {
+                            throw new Exception(
+                                "Failed to prepare order query."
+                            );
+                        }
+                        mysqli_stmt_bind_param(
+                            $orderSelectSql,
+                            "i",
+                            $userId
+                        );
+
+                        if (!mysqli_stmt_execute($orderSelectSql)) {
+                            mysqli_stmt_close(
+                                $orderSelectSql
+                            );
+                            throw new Exception(
+                                "Failed to retrieve orders."
+                            );
+                        }
+                        mysqli_stmt_bind_result(
+                            $orderSelectSql,
+                            $orderId
+                        );
+                        while (
+                            mysqli_stmt_fetch(
+                                $orderSelectSql
+                            )
+                        ) {
+                            $orderIds[] =(int)$orderId;
+                        }
+
+                        mysqli_stmt_close(
+                            $orderSelectSql
+                        );
+                        if (count($orderIds) > 0) {
+                            $placeholders =
+                                implode(
+                                    ",",
+                                    array_fill(
+                                        0,
+                                        count($orderIds),
+                                        "?"
+                                    )
+                                );
+
+                            $orderItemSql =
+                                mysqli_prepare(
+                                    $conn,
+                                    "
+                                    DELETE FROM order_items
+                                    WHERE order_id IN (
+                                        $placeholders
+                                    )
+                                    "
+                                );
+
+                            if (!$orderItemSql) {
+                                throw new Exception(
+                                    "Failed to prepare order item deletion."
+                                );
+                            }
+
+                            $orderTypes =
+                                str_repeat(
+                                    "i",
+                                    count($orderIds)
+                                );
+
+                            mysqli_stmt_bind_param(
+                                $orderItemSql,
+                                $orderTypes,
+                                ...$orderIds
+                            );
+
+                            if (!mysqli_stmt_execute(
+                                    $orderItemSql)) {
+                                mysqli_stmt_close(
+                                    $orderItemSql
+                                );
+                                throw new Exception(
+                                    "Failed to delete order items."
+                                );
+                            }
+                            mysqli_stmt_close(
+                                $orderItemSql
+                            );
+                        }
+                        $orderDeleteSql =
+                            mysqli_prepare(
+                                $conn,
+                                "
+                                DELETE FROM orders
+                                WHERE user_id = ?
+                                "
+                            );
+                        if (!$orderDeleteSql) {
+                            throw new Exception(
+                                "Failed to prepare order deletion."
+                            );
+                        }
+
+                        mysqli_stmt_bind_param(
+                            $orderDeleteSql,
+                            "i",
+                            $userId
+                        );
+
+                        if (!mysqli_stmt_execute(
+                                $orderDeleteSql
+                            )) {
+                            mysqli_stmt_close(
+                                $orderDeleteSql
+                            );
+                            throw new Exception(
+                                "Failed to delete orders."
+                            );
+                        }
+
+
+                        mysqli_stmt_close(
+                            $orderDeleteSql
+                        );
+
+                        $otpDeleteSql =
+                            mysqli_prepare(
+                                $conn,
+                                "
+                                DELETE FROM password_otps
+                                WHERE user_id = ?
+                                   OR email = ?
+                                "
+                            );
+
+                        if (!$otpDeleteSql) {
+                            throw new Exception(
+                                "Failed to prepare OTP deletion."
+                            );
+                        }
+
+                        mysqli_stmt_bind_param(
+                            $otpDeleteSql,
+                            "is",
+                            $userId,
+                            $email
+                        );
+
+                        if (!mysqli_stmt_execute($otpDeleteSql)) {
+                            mysqli_stmt_close(
+                                $otpDeleteSql
+                            );
+                            throw new Exception(
+                                "Failed to delete OTP records."
+                            );
+                        }
+                        mysqli_stmt_close(
+                            $otpDeleteSql
+                        );
+                        $profileDeleteSql =
+                            mysqli_prepare(
+                                $conn,
+                                "
+                                DELETE FROM user_profiles
+                                WHERE user_id = ?
+                                "
+                            );
+                        if (!$profileDeleteSql) {
+                            throw new Exception(
+                                "Failed to prepare profile deletion."
+                            );
+                        }
+                        mysqli_stmt_bind_param(
+                            $profileDeleteSql,
+                            "i",
+                            $userId
+                        );
+
+                        if (!mysqli_stmt_execute($profileDeleteSql)) {
+                            mysqli_stmt_close(
+                                $profileDeleteSql
+                            );
+                            throw new Exception(
+                                "Failed to delete profile."
+                            );
+                        }
+                        mysqli_stmt_close(
+                            $profileDeleteSql
+                        );
+
+                        $userDeleteSql =
+                            mysqli_prepare(
+                                $conn,
+                                "
+                                DELETE FROM users
+                                WHERE id = ?
+                                LIMIT 1
+                                "
+                            );
+
+                        if (!$userDeleteSql) {
+                            throw new Exception(
+                                "Failed to prepare account deletion."
+                            );
+                        }
+                        mysqli_stmt_bind_param(
+                            $userDeleteSql,
+                            "i",
+                            $userId
+                        );
+
+                        if (!mysqli_stmt_execute($userDeleteSql)) {
+                            mysqli_stmt_close(
+                                $userDeleteSql
+                            );
+                            throw new Exception(
+                                "Failed to delete account."
+                            );
+                        }
+
+
+                        if (mysqli_stmt_affected_rows($userDeleteSql) !== 1) {
+                            mysqli_stmt_close(
+                                $userDeleteSql
+                            );
+                            throw new Exception(
+                                "Account could not be deleted."
+                            );
+                        }
+                        mysqli_stmt_close(
+                            $userDeleteSql
+                        );
+
+                        if (!mysqli_commit($conn)) {
+                            throw new Exception(
+                                "Failed to complete account deletion."
+                            );
+                        }
+
+                        if ($pictureToDelete !== "") {
+                            $picturePath ="images/profile/" .
+                                basename(
+                                    $pictureToDelete
+                                );
+
+                            if (file_exists($picturePath) &&is_file($picturePath)) {
+                                unlink(
+                                    $picturePath
+                                );
+                            }
+                        }
+
+                        $_SESSION = [];
+                        if (ini_get(
+                                "session.use_cookies"
+                            )
+                        ) {
+                            $params = session_get_cookie_params();
+                            setcookie(
+                                session_name(),
+                                "",
+                                time() - 42000,
+                                $params["path"],
+                                $params["domain"],
+                                $params["secure"],
+                                $params["httponly"]
+                            );
+                        }
+                        session_destroy();
+                        header("Location: login.php?account_deleted=1");
+                        exit();
+                    } catch (Throwable $e) {
+                        mysqli_rollback(
+                            $conn
+                        );
+
+                        error_log(
+                            "Account deletion error: " .
+                            $e->getMessage()
+                        );
+                        $error ="Unable to delete your account. Please try again.";
+                    }
+                }
             }
         }
     }
 }
 
 $profileImageUrl = "";
+
 if ($profilePicture !== "") {
-    $profileImageUrl = "images/profile/" .htmlspecialchars($profilePicture);
+
+    $profileImageUrl =
+        "images/profile/" .
+        htmlspecialchars(
+            $profilePicture,
+            ENT_QUOTES,
+            "UTF-8"
+        );
 }
 
 $initial = strtoupper(
@@ -384,321 +1421,141 @@ $initial = strtoupper(
     )
 );
 
-
-if (isset($_POST["delete_account"])) {
-    $deletePassword = $_POST["delete_account_password"] ?? "";
-    if ($deletePassword === "") {
-        $error = "Please enter your current password.";
-    } else {
-        $passwordCheckSql = mysqli_prepare(
-            $conn,
-            "SELECT new_password
-             FROM users
-             WHERE id = ?"
-        );
-        mysqli_stmt_bind_param(
-            $passwordCheckSql,
-            "i",
-            $userId
-        );
-
-        mysqli_stmt_execute($passwordCheckSql);
-        $passwordCheckResult = mysqli_stmt_get_result(
-            $passwordCheckSql
-        );
-        $passwordCheckData = mysqli_fetch_assoc(
-            $passwordCheckResult
-        );
-        $storedPassword=$passwordCheckData["new_password"] ?? "";
-        mysqli_stmt_close($passwordCheckSql);
-        if (!password_verify($deletePassword, $storedPassword)) {
-            $error = "Current password is incorrect.";
-        } else {
-            $pictureSql = mysqli_prepare(
-                $conn,
-                "SELECT profile_picture
-                 FROM user_profiles
-                 WHERE user_id = ?"
-            );
-
-            mysqli_stmt_bind_param(
-                $pictureSql,
-                "i",
-                $userId
-            );
-            mysqli_stmt_execute($pictureSql);
-            $pictureResult = mysqli_stmt_get_result(
-                $pictureSql
-            );
-            $pictureData = null;
-
-            if ($pictureResult && mysqli_num_rows($pictureResult) === 1) {
-                $pictureData = mysqli_fetch_assoc(
-                    $pictureResult
-                );
-            }
-            mysqli_stmt_close($pictureSql);
-            $pictureToDelete=$pictureData["profile_picture"] ?? "";
-            mysqli_begin_transaction($conn);
-
-            try {
-                $activitySql = mysqli_prepare(
-                    $conn,
-                    "DELETE FROM user_product_activity
-                     WHERE user_id = ?"
-                );
-                mysqli_stmt_bind_param(
-                    $activitySql,
-                    "i",
-                    $userId
-                );
-
-                if (!mysqli_stmt_execute($activitySql)) {
-                    throw new Exception(
-                        "Failed to delete activity records."
-                    );
-                }
-                mysqli_stmt_close($activitySql);
-                $reviewSql = mysqli_prepare(
-                    $conn,
-                    "DELETE FROM product_reviews
-                     WHERE user_id = ?"
-                );
-
-                mysqli_stmt_bind_param(
-                    $reviewSql,
-                    "i",
-                    $userId
-                );
-
-                if (!mysqli_stmt_execute($reviewSql)) {
-                    throw new Exception(
-                        "Failed to delete review records."
-                    );
-                }
-                mysqli_stmt_close($reviewSql);
-                $orderIds = [];
-                $orderSelectSql = mysqli_prepare(
-                    $conn,
-                    "SELECT id
-                     FROM orders
-                     WHERE user_id = ?"
-                );
-
-                mysqli_stmt_bind_param(
-                    $orderSelectSql,
-                    "i",
-                    $userId
-                );
-                mysqli_stmt_execute($orderSelectSql);
-                $orderResult = mysqli_stmt_get_result(
-                    $orderSelectSql
-                );
-
-                while ($order = mysqli_fetch_assoc($orderResult)) {
-                    $orderIds[] = (int) $order["id"];
-                }
-
-                mysqli_stmt_close($orderSelectSql);
-
-                if (!empty($orderIds)) {
-                    $orderPlaceholders = implode(
-                        ",",
-                        array_fill(
-                            0,
-                            count($orderIds),
-                            "?"
-                        )
-                    );
-                    $orderItemSql = mysqli_prepare(
-                        $conn,
-                        "DELETE FROM order_items
-                         WHERE order_id IN ($orderPlaceholders)"
-                    );
-                    $orderTypes = str_repeat(
-                        "i",
-                        count($orderIds)
-                    );
-                    mysqli_stmt_bind_param(
-                        $orderItemSql,
-                        $orderTypes,
-                        ...$orderIds
-                    );
-
-                    if (!mysqli_stmt_execute($orderItemSql)) {
-                        throw new Exception(
-                            "Failed to delete order items."
-                        );
-                    }
-                    mysqli_stmt_close($orderItemSql);
-                }
-                $orderDeleteSql = mysqli_prepare(
-                    $conn,
-                    "DELETE FROM orders
-                     WHERE user_id = ?"
-                );
-
-                mysqli_stmt_bind_param(
-                    $orderDeleteSql,
-                    "i",
-                    $userId
-                );
-
-                if (!mysqli_stmt_execute($orderDeleteSql)) {
-                    throw new Exception(
-                        "Failed to delete orders."
-                    );
-                }
-                mysqli_stmt_close($orderDeleteSql);
-                $profileDeleteSql = mysqli_prepare(
-                    $conn,
-                    "DELETE FROM user_profiles
-                     WHERE user_id = ?"
-                );
-
-                mysqli_stmt_bind_param(
-                    $profileDeleteSql,
-                    "i",
-                    $userId
-                );
-
-                if (!mysqli_stmt_execute($profileDeleteSql)) {
-                    throw new Exception(
-                        "Failed to delete profile."
-                    );
-                }
-
-                mysqli_stmt_close($profileDeleteSql);
-                $userDeleteSql = mysqli_prepare(
-                    $conn,
-                    "DELETE FROM users
-                     WHERE id = ?"
-                );
-
-                mysqli_stmt_bind_param(
-                    $userDeleteSql,
-                    "i",
-                    $userId
-                );
-
-                if (!mysqli_stmt_execute($userDeleteSql)) {
-                    throw new Exception(
-                        "Failed to delete account."
-                    );
-                }
-
-                if (mysqli_stmt_affected_rows($userDeleteSql) !== 1) {
-                    throw new Exception(
-                        "Account could not be deleted."
-                    );
-                }
-
-                mysqli_stmt_close($userDeleteSql);
-                mysqli_commit($conn);
-
-                if ($pictureToDelete !== "") {
-                    $picturePath ="images/profile/" .
-                        basename($pictureToDelete);
-
-                    if (file_exists($picturePath) && is_file($picturePath)) {
-                        unlink($picturePath);
-                    }
-                }
-
-                $_SESSION = [];
-                if (ini_get("session.use_cookies")) {
-                    $params = session_get_cookie_params();
-                    setcookie(
-                        session_name(),
-                        "",
-                        time() - 42000,
-                        $params["path"],
-                        $params["domain"],
-                        $params["secure"],
-                        $params["httponly"]
-                    );
-                }
-                session_destroy();
-                header("Location: login.php?account_deleted=1");
-                exit();
-            } catch (Throwable $e) {
-                mysqli_rollback($conn);
-                $error ="Unable to delete your account. " ."Please try again.";
-            }
-        }
-    }
-}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Profile | Inknest</title>
+    <title>
+        Manage Profile | Inknest
+    </title>
     <link rel="stylesheet" href="css/profile.css?v=<?php echo time(); ?>">
 </head>
 
+
 <body>
 <nav class="navbar">
+
     <a href="home.php" class="logo">Inknest</a>
     <div class="nav-right">
         <div class="user-info">
             <?php if ($profilePicture !== ""): ?>
-                <img src="<?php echo $profileImageUrl; ?>" alt="Profile Picture" class="profile-picture-small">
+                <img
+                    src="<?php echo $profileImageUrl; ?>"
+                    alt="Profile Picture"
+                    class="profile-picture-small"
+                >
             <?php else: ?>
                 <div class="profile-placeholder-small">
-                    <?php echo htmlspecialchars($initial); ?>
+                    <?php
+                    echo htmlspecialchars(
+                        $initial,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
+                    ?>
                 </div>
             <?php endif; ?>
-            <span>Hi,<?php echo htmlspecialchars($username); ?></span>
+            <span>
+                Hi,
+                <?php
+                echo htmlspecialchars(
+                    $username,
+                    ENT_QUOTES,
+                    "UTF-8"
+                );
+                ?>
+            </span>
         </div>
-
-        <a href="cart.php">Cart</a>
-        <a href="home.php">Back</a>
-        <a href="logout.php">Logout</a>
+        <a href="cart.php">
+            Cart
+        </a>
+        <a href="home.php">
+            Back
+        </a>
+        <a href="logout.php">
+            Logout
+        </a>
     </div>
 </nav>
 
-
-
 <main class="container">
     <div class="page-title">
-        <h1>Manage Profile</h1>
-        <p>Change your account information and profile picture.</p>
+        <h1>
+            Manage Profile
+        </h1>
+        <p>
+            Change your account information and profile picture.
+        </p>
     </div>
 
     <?php if ($error !== ""): ?>
         <div class="message error">
-            <?php echo htmlspecialchars($error); ?>
+            <?php
+            echo htmlspecialchars(
+                $error,
+                ENT_QUOTES,
+                "UTF-8"
+            );
+            ?>
         </div>
     <?php endif; ?>
 
     <?php if ($success !== ""): ?>
         <div class="message success">
-            <?php echo htmlspecialchars($success); ?>
+            <?php
+            echo htmlspecialchars(
+                $success,
+                ENT_QUOTES,
+                "UTF-8"
+            );
+            ?>
+
         </div>
     <?php endif; ?>
 
     <div class="profile-grid">
         <div class="card picture-section">
-            <h2>Profile Picture</h2>
+            <h2>
+                Profile Picture
+            </h2>
             <?php if ($profilePicture !== ""): ?>
-                <img src="<?php echo $profileImageUrl; ?>" alt="Profile Picture" class="profile-image-large">
+                <img
+                    src="<?php echo $profileImageUrl; ?>"
+                    alt="Profile Picture"
+                    class="profile-image-large"
+                >
+
             <?php else: ?>
                 <div class="profile-placeholder-large">
-                    <?php echo htmlspecialchars($initial); ?>
+                    <?php
+                    echo htmlspecialchars(
+                        $initial,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
+                    ?>
                 </div>
             <?php endif; ?>
+
 
             <p class="picture-info">
                 JPG, PNG or WEBP<br>
                 Maximum size: 5 MB
             </p>
-
             <form method="POST" enctype="multipart/form-data">
-                <input type="file" name="profile_picture" class="file-input" accept="image/jpeg,image/png,image/webp" required>
-                <button type="submit" name="upload_picture" class="btn btn-primary">
+                <input type="file"
+                    name="profile_picture"
+                    class="file-input"
+                    accept="image/jpeg,image/png,image/webp"
+                    required>
+                <button
+                    type="submit"
+                    name="upload_picture"
+                    class="btn btn-primary" >
                     <?php
                     echo $profilePicture !== ""
                         ? "Change Picture"
@@ -706,179 +1563,528 @@ if (isset($_POST["delete_account"])) {
                     ?>
                 </button>
             </form>
-
             <?php if ($profilePicture !== ""): ?>
                 <form method="POST">
-
                     <button
                         type="submit"
                         name="delete_picture"
                         class="btn btn-danger"
-                        onclick="return confirm('Are you sure you want to delete your profile picture?');">
+                        onclick="
+                            return confirm(
+                                'Are you sure you want to delete your profile picture?'
+                            );
+                        " >
                         Delete Picture
                     </button>
                 </form>
             <?php endif; ?>
         </div>
-
         <div class="card">
             <h2>Account Information</h2>
             <form method="POST">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="first_name">First Name</label>
-                        <input type="text" id="first_name" name="first_name" value="<?php echo htmlspecialchars($firstName); ?>" required>
+                        <label for="first_name">
+                            First Name
+                        </label>
+                        <input type="text"
+                            id="first_name"
+                            name="first_name"
+                            value="<?php
+                                echo htmlspecialchars(
+                                    $firstName,
+                                    ENT_QUOTES,
+                                    "UTF-8"
+                                );
+                            ?>"
+                            required>
                     </div>
-
                     <div class="form-group">
-                        <label for="last_name">Last Name</label>
-                        <input type="text" id="last_name" name="last_name" value="<?php echo htmlspecialchars($lastName); ?>" required>
+                        <label for="last_name">
+                            Last Name
+                        </label>
+                        <input
+                            type="text"
+                            id="last_name"
+                            name="last_name"
+                            value="<?php
+                                echo htmlspecialchars(
+                                    $lastName,
+                                    ENT_QUOTES,
+                                    "UTF-8"
+                                );
+                            ?>"
+                            required>
                     </div>
                 </div>
-
                 <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($username); ?>" required>
+                    <label for="username">
+                        Username
+                    </label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        value="<?php
+                            echo htmlspecialchars(
+                                $username,
+                                ENT_QUOTES,
+                                "UTF-8"
+                            );
+                        ?>"
+                        required>
                 </div>
-
                 <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required>
+                    <label for="email">
+                        Email
+                    </label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="<?php
+                            echo htmlspecialchars(
+                                $email,
+                                ENT_QUOTES,
+                                "UTF-8"
+                            );
+                        ?>"
+                        required>
                 </div>
-
                 <div class="form-group">
-                    <label for="phone"> Phone Number </label>
-
-                    <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($phone); ?>" maxlength="10" pattern="[0-9]{10}" required>
+                    <label for="phone">
+                        Phone Number
+                    </label>
+                    <input type="text"
+                        id="phone"
+                        name="phone"
+                        value="<?php
+                            echo htmlspecialchars(
+                                $phone,
+                                ENT_QUOTES,
+                                "UTF-8"
+                            );
+                        ?>"
+                        maxlength="10"
+                        pattern="[0-9]{10}"
+                        required>
                 </div>
-                <button type="submit" name="update_profile" class="btn btn-primary">Save Changes</button>
+                <button type="submit"
+                    name="update_profile"
+                    class="btn btn-primary">
+                    Save Changes
+                </button>
             </form>
-
-
             <hr class="section-divider">
             <h2>Change Password</h2>
             <p class="password-note">Your new password must be at least 8 characters.</p>
             <form method="POST">
                 <div class="form-group">
-                    <label for="current_password">Current Password</label>
-                    <input type="password" id="current_password" name="current_password" required>
+                    <label for="current_password">
+                        Current Password
+                    </label>
+                    <input type="password"
+                        id="current_password"
+                        name="current_password"
+                        required>
                 </div>
-
                 <div class="form-group">
-                    <label for="new_password">New Password</label>
-                    <input type="password" id="new_password" name="new_password" minlength="8" required>
+                    <label for="new_password">
+                        New Password
+                    </label>
+                    <input type="password"
+                        id="new_password"
+                        name="new_password"
+                        minlength="8"
+                        required>
                 </div>
-
                 <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" minlength="8" required>
-                </div>
+                    <label for="confirm_password">
+                        Confirm Password
+                    </label>
+                    <input type="password"
+                        id="confirm_password"
+                        name="confirm_password"
+                        minlength="8"
+                        required>
 
+                </div>
                 <div class="forgot-password">
-                    <a href="forgot_password.php">Forgot Password?</a>
+                    <a href="forgot_password.php">
+                        Forgot Password?
+                    </a>
                 </div>
-                
-                <button type="submit" name="change_password" class="btn btn-primary">Change Password</button>
+                <button type="submit"
+                    name="change_password"
+                    class="btn btn-primary">
+                    Change Password
+                </button>
             </form>
+            <?php
+            if (
+                $sendOtpNow ||
+                (
+                    isset(
+                        $_SESSION["profile_otp_action"],
+                        $_SESSION["profile_otp_email"]
+                    ) &&
+                    !isset(
+                        $_SESSION["otp_verified"]
+                    )
+                )
+            ):
+            ?>
+                <hr class="section-divider">
+                <h2>
+                    Verify OTP
+                </h2>
+
+                <p class="password-note">A verification code has been sent to your current email address.</p>
+                <div class="form-group">
+                    <label for="profile_otp">
+                        Verification Code
+                    </label>
+                    <input type="text"
+                        id="profile_otp"
+                        maxlength="6"
+                        inputmode="numeric"
+                        autocomplete="one-time-code"
+                        placeholder="Enter 6-digit OTP">
+                </div>
+                <button type="button"
+                    id="verifyProfileOtp"
+                    class="btn btn-primary">
+                    Verify OTP
+                </button>
+                <button type="button"
+                    id="resendProfileOtp"
+                    class="btn btn-primary"
+                    style="margin-top:10px;">
+                    Resend OTP
+                </button>
+                <p id="profileOtpMessage" class="password-note"></p>
+                <form id="completeOtpForm" method="POST" style="display:none;">
+                    <input type="hidden" name="complete_otp_update" value="1">
+                </form>
+            <?php endif; ?>
         </div>
     </div>
 
     <hr class="section-divider">
-
-<div class="delete-account-section">
-    <h2>Delete Account</h2>
-    <p class="delete-account-warning">
-        Permanently delete your Inknest account and all
-        associated account data. This action cannot be undone.
-    </p>
-
-    <form method="POST" onsubmit="return confirmDeleteAccount();">
-        <div class="form-group">
-            <label for="delete_account_password">Current Password</label>
-            <input type="password" id="delete_account_password" name="delete_account_password" placeholder="Enter your current password" required>
-        </div>
-
-        <button type="submit" name="delete_account" class="btn btn-danger delete-account-btn">Delete My Account</button>
-    </form>
-</div>
+    <div class="delete-account-section">
+        <h2>
+            Delete Account
+        </h2>
+        <p class="delete-account-warning">
+            Permanently delete your Inknest account and all
+            associated account data. This action cannot be undone.
+        </p>
+        <form method="POST" id="deleteAccountForm">
+            <div class="form-group">
+                <label for="delete_account_password">
+                    Current Password
+                </label>
+                <input
+                    type="password"
+                    id="delete_account_password"
+                    name="delete_account_password"
+                    placeholder="Enter your current password"
+                    required>
+            </div>
+            <button type="submit" name="delete_account" value="1" class="btn btn-danger delete-account-btn">Delete My Account</button>
+        </form>
+    </div>
 </main>
-
 <script>
-    const phoneInput =document.getElementById("phone");
-    if (phoneInput) {
-        phoneInput.addEventListener(
-            "input",
-            function () {
-                this.value =
-                    this.value
-                        .replace(/\D/g, "")
-                        .slice(0, 10);
-            }
-        );
-    }
+const phoneInput =document.getElementById("phone");
 
-    const passwordForm =document.querySelector('button[name="change_password"]');
-    if (passwordForm) {
-        passwordForm
-            .closest("form")
-            .addEventListener(
-                "submit",
-                function (event) {
-                    const newPassword =
-                        document.getElementById(
-                            "new_password"
-                        ).value;
-                    const confirmPassword =
-                        document.getElementById(
-                            "confirm_password"
-                        ).value;
-                    if (newPassword !==confirmPassword) {
-                        event.preventDefault();
-                        alert("New passwords do not match.");
-                    }
+if (phoneInput) {
+    phoneInput.addEventListener(
+        "input",
+        function () {
+            this.value =
+                this.value
+                    .replace(/\D/g, "")
+                    .slice(0, 10);
+        }
+    );
+}
+
+const passwordButton =document.querySelector('button[name="change_password"]');
+if (passwordButton) {
+    const passwordForm=passwordButton.closest("form");
+    passwordForm.addEventListener(
+        "submit",
+        function (event) {
+            const newPassword =document.getElementById("new_password").value;
+            const confirmPassword =document.getElementById("confirm_password").value;
+            if (newPassword !==confirmPassword) {
+                event.preventDefault();
+                alert("New passwords do not match.");
+            }
+        }
+    );
+}
+
+const profileOtpInput =document.getElementById("profile_otp");
+const verifyProfileOtp =document.getElementById("verifyProfileOtp");
+const resendProfileOtp =document.getElementById("resendProfileOtp");
+const profileOtpMessage =document.getElementById("profileOtpMessage");
+const profileOtpEmail =<?php
+    echo json_encode(
+        $_SESSION["profile_otp_email"] ?? $email
+    );
+    ?>;
+const profileOtpPurpose =<?php
+    echo json_encode(
+        $_SESSION["profile_otp_purpose"]
+        ?? "change_password"
+    );
+    ?>;
+
+function setProfileOtpMessage(
+    message,
+    isError = false
+) {
+    if (!profileOtpMessage) {
+        return;
+    }
+    profileOtpMessage.textContent=message;
+    profileOtpMessage.style.color =
+        isError
+            ? "#c62828"
+            : "#555";
+}
+
+async function sendProfileOtp() {
+    if (!profileOtpEmail) {
+        setProfileOtpMessage(
+            "Email address is missing.",
+            true
+        );
+        return;
+    }
+    if (resendProfileOtp) {
+        resendProfileOtp.disabled =true;
+    }
+    setProfileOtpMessage("Sending OTP...");
+    const formData =new FormData();
+    formData.append(
+        "email",
+        profileOtpEmail
+    );
+    formData.append(
+        "purpose",
+        profileOtpPurpose
+    );
+
+    try {
+        const response =await fetch(
+                "auth/send_otp.php",
+                {
+                    method: "POST",
+                    body: formData
                 }
             );
-    }
+        const text =await response.text();
+        let data;
+        try {
+            data =JSON.parse(text);
+        } catch (error) {
+            console.error(
+                "Invalid OTP response:",
+                text
+            );
+            throw new Error(
+                "Server returned an invalid response."
+            );
+        }
 
-    const fileInput =document.querySelector('input[name="profile_picture"]');
-    if (fileInput) {
-        fileInput.addEventListener(
-            "change",
+        if (!data.success) {
+            throw new Error(
+                data.message ||
+                "Unable to send OTP."
+            );
+        }
+        setProfileOtpMessage("OTP sent successfully. Check your email.");
+        if (profileOtpInput) {
+            profileOtpInput.focus();
+        }
+        setTimeout(
             function () {
-                const file = this.files[0];
-                if (!file) {
-                    return;
+                if (resendProfileOtp) {
+                    resendProfileOtp.disabled =false;
                 }
-                const allowedTypes = [
-                    "image/jpeg",
-                    "image/png",
-                    "image/webp"
-                ];
+            },
+            60000
+        );
+    } catch (error) {
+        console.error(
+            "Send OTP error:",
+            error
+        );
+        setProfileOtpMessage(
+            error.message ||
+            "Unable to send OTP.",
+            true
+        );
 
-                if (!allowedTypes.includes(file.type)) {
-                    alert("Only JPG, PNG and WEBP images are allowed.");
-                    this.value = "";
-                    return;
+        if (resendProfileOtp) {
+            resendProfileOtp.disabled =false;
+        }
+    }
+}
+
+if (verifyProfileOtp) {
+    verifyProfileOtp.addEventListener(
+        "click",
+        async function () {
+            const otp =
+                profileOtpInput
+                    ? profileOtpInput.value.trim()
+                    : "";
+            if (!/^[0-9]{6}$/.test(otp)) {
+                setProfileOtpMessage(
+                    "Please enter a valid 6-digit OTP.",
+                    true
+                );
+                return;
+            }
+            verifyProfileOtp.disabled =true;
+            setProfileOtpMessage("Verifying OTP...");
+            const formData =new FormData();
+            formData.append(
+                "email",
+                profileOtpEmail
+            );
+            formData.append(
+                "otp",
+                otp
+            );
+            formData.append(
+                "purpose",
+                profileOtpPurpose
+            );
+            try {
+                const response =await fetch(
+                        "auth/verify_otp.php",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+                const text=await response.text();
+                let data;
+                try {
+                    data=JSON.parse(text);
+                } catch (error) {
+                    console.error(
+                        "Invalid verification response:",
+                        text
+                    );
+                    throw new Error(
+                        "Server returned an invalid response."
+                    );
                 }
+                if (!data.success) {
+                    throw new Error(
+                        data.message ||
+                        "Invalid OTP."
+                    );
+                }
+                setProfileOtpMessage(
+                    "OTP verified. Updating your account..."
+                );
+                if (profileOtpInput) {
+                    profileOtpInput.disabled =true;
+                }
+                verifyProfileOtp.disabled =true;
+                if (resendProfileOtp) {
+                    resendProfileOtp.disabled =true;
+                }
+                const completeForm =document.getElementById("completeOtpForm");
 
-                if (file.size >5 * 1024 * 1024) {
-                    alert("Image size must be less than 5 MB.");
-                    this.value = "";
-                    return;
+                if (completeForm) {
+                    completeForm.submit();
+                }
+            } catch (error) {
+                console.error(
+                    "Verify OTP error:",
+                    error
+                );
+                setProfileOtpMessage(
+                    error.message ||
+                    "Unable to verify OTP.",
+                    true
+                );
+                verifyProfileOtp.disabled =false;
+            }
+        }
+    );
+}
+
+if (resendProfileOtp) {
+    resendProfileOtp.addEventListener(
+        "click",
+        function () {
+            if (!resendProfileOtp.disabled) {
+                sendProfileOtp();
+            }
+        }
+    );
+}
+
+if (profileOtpInput) {
+    profileOtpInput.addEventListener(
+        "input",
+        function () {
+            this.value =this.value.replace(/\D/g,"").slice(0,6);
+        }
+    );
+
+    profileOtpInput.addEventListener(
+        "keydown",
+        function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                if (verifyProfileOtp) {
+                    verifyProfileOtp.click();
                 }
             }
-        );
-    }
+        }
+    );
+}
+<?php if ($sendOtpNow): ?>
+sendProfileOtp();
+<?php endif; ?>
+const fileInput =document.querySelector('input[name="profile_picture"]');
 
-    function confirmDeleteAccount() {
-    const firstConfirm = confirm("Are you sure you want to permanently delete your account?");
-
-    if (!firstConfirm) {
-        return false;
-    }
-    const secondConfirm = confirm("This will permanently delete your profile, reviews, activity, orders and account data. This action cannot be undone. Continue?");
-    return secondConfirm;
+if (fileInput) {
+    fileInput.addEventListener(
+        "change",
+        function () {
+            const file =this.files[0];
+            if (!file) {
+                return;
+            }
+            const allowedTypes = [
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+            ];
+            if (!allowedTypes.includes(file.type)) {
+                alert("Only JPG, PNG and WEBP images are allowed.");
+                this.value = "";
+                return;
+            }
+            if (file.size >5 * 1024 * 1024) {
+                alert("Image size must be less than 5 MB.");
+                this.value = "";
+            }
+        }
+    );
 }
 </script>
+<script src="js/users.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

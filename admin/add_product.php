@@ -123,6 +123,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <a href="bill.php">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
+         <a href="chat.php">
+                Chat
+                <span
+                    id="adminChatBadge"
+                    class="admin-chat-badge">
+                    0
+                </span>
+            </a>
     </nav>
 
     <div class="sidebar-bottom">

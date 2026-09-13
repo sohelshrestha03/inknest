@@ -266,5 +266,61 @@ if ($search !== "") {
         <?php endif; ?>
     </div>
 </main>
+
+   <button type="button"
+    class="inknest-chat-button"
+    id="inknestChatButton"
+    aria-label="Open chat"> 💬
+    <span
+        class="inknest-chat-badge"
+        id="inknestChatBadge"
+    >
+        0
+    </span>
+    </button>
+
+
+<div class="inknest-chat-box" id="inknestChatBox">
+    <div class="inknest-chat-header">
+        <div class="inknest-chat-title">
+            <strong>
+                Inknest Support
+            </strong>
+            <span>
+                We are here to help
+            </span>
+        </div>
+
+        <button
+            type="button"
+            class="inknest-chat-close"
+            id="inknestChatClose">
+            x
+        </button>
+
+    </div>
+
+
+    <div class="inknest-chat-messages" id="inknestChatMessages">
+        <div class="inknest-chat-empty">
+            Loading chat...
+        </div>
+    </div>
+
+    <div class="inknest-chat-input-area">
+        <input type="text"
+            id="inknestChatInput"
+            class="inknest-chat-input"
+            placeholder="Type a message..."
+            maxlength="2000"
+            autocomplete="off">
+        <button type="button"
+            id="inknestChatSend"
+            class="inknest-chat-send"> ➤
+        </button>
+    </div>
+</div>
+<link rel="stylesheet"href="css/chat.css?v=<?php echo time(); ?>">
+<script src="js/chat.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
