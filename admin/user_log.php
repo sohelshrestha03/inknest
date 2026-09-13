@@ -48,6 +48,7 @@ $activityQuery = mysqli_query(
         <a href="user_profiles.php">User Profiles</a>
         <a href="user_log.php" class="active">User Activity</a>
         <a href="product_reviews.php">Product Reviews</a>
+        <a href="admin_wishlist.php">Customer Wishlist</a>
         <a href="bill.php">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>

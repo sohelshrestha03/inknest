@@ -47,14 +47,15 @@ $result = mysqli_query(
     <h1>Inknest</h1>
     <p class="admin-label">ADMIN PANEL</p>
     <nav>
-        <a href="admin_dashboard.php">Dashboard</a>
-        <a href="products.php" class="active">Products</a>
+       <a href="admin_dashboard.php" class="active">Dashboard</a>
+        <a href="products.php">Products</a>
         <a href="add_product.php">Add Product</a>
         <a href="orders.php">Orders</a>
         <a href="users.php">Users</a>
         <a href="user_profiles.php">User Profiles</a>
         <a href="user_log.php">User Activity</a>
-        <a href="product_reviews.php">Product Reviews</a>
+        <a href="product_reviews.php" >Product Reviews</a>
+        <a href="admin_wishlist.php">Customer Wishlist</a>
         <a href="bill.php">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>

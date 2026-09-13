@@ -19,6 +19,7 @@ $adminUsername=$_SESSION["admin_username"] ?? "Admin";
     <title>Chat | Inknest Admin</title>
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin_chat.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../css/admin_footer.css?v=<?php echo time(); ?>">
 </head>
 
 
@@ -36,6 +37,7 @@ $adminUsername=$_SESSION["admin_username"] ?? "Admin";
         <a href="user_profiles.php">User Profiles</a>
         <a href="user_log.php">User Activity</a>
         <a href="product_reviews.php">Product Reviews</a>
+        <a href="admin_wishlist.php">Customer Wishlist</a>
         <a href="bill.php">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
@@ -45,6 +47,14 @@ $adminUsername=$_SESSION["admin_username"] ?? "Admin";
             </span>
         </a>
     </nav>
+
+     <div class="sidebar-bottom">
+
+            <a href="admin_logout.php">
+                Logout
+            </a>
+
+        </div>
 </aside>
 
 <main class="main">

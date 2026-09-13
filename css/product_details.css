@@ -126,9 +126,7 @@ textarea {
     color: #111111;
     border-radius: 7px;
     font-size: 13px;
-    transition:
-        background 0.2s ease,
-        transform 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .logout:hover {
@@ -249,6 +247,54 @@ textarea {
     font-weight: 700;
 }
 
+.wishlist-action {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.wishlist-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 125px;
+    padding: 9px 16px;
+    border: 1px solid #111111;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111111;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.wishlist-btn:hover {
+    background: #111111;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.wishlist-btn:active {
+    transform: translateY(0);
+}
+
+.wishlist-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.wishlist-message {
+    min-height: 20px;
+    margin-top: 8px;
+    color: #19733e;
+    font-size: 13px;
+}
+
 .quantity-section {
     display: flex;
     align-items: center;
@@ -312,7 +358,10 @@ textarea {
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition:background 0.2s ease,transform 0.2s ease,opacity 0.2s ease;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease,
+        opacity 0.2s ease;
 }
 
 .add-to-cart-btn:hover {
@@ -366,7 +415,7 @@ textarea {
     background: #ffffff;
     border-radius: 16px;
     padding: 32px;
-    box-shadow:0 5px 25px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.05);
 }
 
 .review-form {
@@ -402,7 +451,7 @@ textarea {
     color: #222222;
     resize: vertical;
     outline: none;
-    transition: border-color 0.2s ease,box-shadow 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-group textarea:focus {
@@ -450,7 +499,9 @@ textarea {
     cursor: pointer;
     font-size: 14px;
     font-weight: 700;
-    transition:background 0.2s ease,transform 0.2s ease;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
 }
 
 .submit-review-btn:hover,
@@ -493,7 +544,6 @@ textarea {
     display: flex;
     align-items: center;
     gap: 11px;
-
     min-width: 0;
 }
 
@@ -656,7 +706,6 @@ textarea {
     overflow-wrap: anywhere;
 }
 
-
 .follow-up-message {
     min-height: 20px;
     margin-top: 10px;
@@ -671,7 +720,6 @@ textarea {
     color: #c62828;
 }
 
-
 .no-reviews {
     padding: 35px 20px;
     text-align: center;
@@ -682,7 +730,6 @@ textarea {
     background: #fafafa;
 }
 
-
 .error-message {
     padding: 20px;
     border-radius: 10px;
@@ -692,7 +739,87 @@ textarea {
     font-size: 14px;
 }
 
+/* Footer */
+
+.footer {
+    margin-top: 45px;
+    background: #111111;
+    color: #ffffff;
+    width: 100%;
+    padding: 30px 45px 15px;
+}
+
+.footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+}
+
+.footer-brand {
+    flex: 1;
+}
+
+.footer-brand h2 {
+    margin-bottom: 7px;
+    font-size: 23px;
+    font-weight: 700;
+}
+
+.footer-brand p {
+    color: #aaaaaa;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.footer-links {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.footer-contact {
+    min-width: 260px;
+}
+
+.footer-contact h3 {
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.footer-contact p {
+    margin: 5px 0;
+    color: #aaaaaa;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.footer-contact strong {
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.footer-bottom {
+    max-width: 1400px;
+    margin: 22px auto 0;
+    padding-top: 12px;
+    border-top: 1px solid #2f2f2f;
+    text-align: center;
+}
+
+.footer-bottom p {
+    color: #888888;
+    font-size: 11px;
+}
+
+/* Tablet */
+
 @media (max-width: 800px) {
+
     .navbar {
         padding: 0 4%;
         min-height: 64px;
@@ -764,9 +891,46 @@ textarea {
     .review-reply-text {
         margin-left: 0;
     }
+
+    .footer-content {
+        gap: 30px;
+    }
+}
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .footer {
+        padding: 28px 20px 14px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    .footer-brand,
+    .footer-links {
+        width: 100%;
+        flex: none;
+    }
+
+    .footer-links {
+        justify-content: flex-start;
+    }
+
+    .footer-contact {
+        min-width: 0;
+    }
+
+    .footer-bottom {
+        margin-top: 18px;
+    }
 }
 
 @media (max-width: 500px) {
+
     .navbar {
         padding: 0 15px;
     }
@@ -817,6 +981,16 @@ textarea {
 
     .product-description {
         font-size: 14px;
+    }
+
+    .wishlist-action {
+        margin-bottom: 20px;
+    }
+
+    .wishlist-btn {
+        min-width: 115px;
+        padding: 8px 14px;
+        font-size: 13px;
     }
 
     .quantity-section {
@@ -878,9 +1052,33 @@ textarea {
         padding: 13px 16px;
         font-size: 15px;
     }
+
+    .footer {
+        padding: 25px 16px 13px;
+    }
+
+    .footer-brand h2 {
+        font-size: 21px;
+    }
+
+    .footer-brand p,
+    .footer-contact p {
+        font-size: 12px;
+    }
+
+    .footer-contact h3 {
+        font-size: 15px;
+    }
+
+    .footer-bottom p {
+        font-size: 10px;
+    }
 }
 
+/* Small Mobile */
+
 @media (max-width: 360px) {
+
     .navbar {
         padding: 0 10px;
     }
@@ -909,5 +1107,9 @@ textarea {
     .review-section,
     .feedback-section {
         padding: 15px;
+    }
+
+    .wishlist-btn {
+        width: 100%;
     }
 }

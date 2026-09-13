@@ -293,5 +293,36 @@ mysqli_stmt_close($stmt);
         </div>
     <?php endif; ?>
 </main>
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-brand">
+            <h2>Inknest</h2>
+            <p>Your trusted online shopping destination.</p>
+        </div>
+        <div class="footer-links">
+            <div class="footer-contact">
+                <h3>Contact Us</h3>
+                <p>
+                    <strong>Phone:</strong>
+                    +977-9800000000
+                </p>
+                <p>
+                    <strong>Email:</strong>
+                    support@inknest.com
+                </p>
+                <p>
+                    <strong>Address:</strong>
+                    Kathmandu, Nepal
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <p>
+            &copy; <?php echo date("Y"); ?> Inknest. All rights reserved.
+        </p>
+    </div>
+</footer>
 </body>
 </html>

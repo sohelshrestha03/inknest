@@ -284,6 +284,135 @@ body {
     transform: translateY(-1px);
 }
 
+.footer {
+    margin-top: 60px;
+    background: #111;
+    color: #fff;
+    width: 100%;
+    padding: 35px 45px 18px;
+    box-sizing: border-box;
+}
+
+.footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 50px;
+}
+
+.footer-brand {
+    flex: 1;
+}
+
+.footer-brand h2 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.footer-brand p {
+    margin: 0;
+    color: #bdbdbd;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.footer-links {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.footer-contact {
+    min-width: 280px;
+}
+
+.footer-contact h3 {
+    margin: 0 0 12px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.footer-contact p {
+    margin: 6px 0;
+    color: #bdbdbd;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.footer-contact strong {
+    color: #fff;
+    font-weight: 500;
+}
+
+.footer-bottom {
+    max-width: 1400px;
+    margin: 25px auto 0;
+    padding-top: 15px;
+    border-top: 1px solid #333;
+    text-align: center;
+}
+
+.footer-bottom p {
+    margin: 0;
+    color: #888;
+    font-size: 12px;
+}
+
+@media (max-width: 700px) {
+
+    .footer {
+        padding: 30px 20px 15px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .footer-links {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .footer-contact {
+        min-width: 0;
+    }
+
+    .footer-bottom {
+        margin-top: 20px;
+    }
+
+}
+
+@media (max-width: 450px) {
+
+    .footer {
+        padding: 25px 16px 14px;
+    }
+
+    .footer-brand h2 {
+        font-size: 22px;
+    }
+
+    .footer-brand p,
+    .footer-contact p {
+        font-size: 13px;
+    }
+
+    .footer-contact h3 {
+        font-size: 16px;
+    }
+
+    .footer-bottom p {
+        font-size: 11px;
+    }
+
+}
+
 @media (max-width: 750px) {
 .navbar {
     padding: 0 20px;

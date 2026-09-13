@@ -324,33 +324,23 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     </p>
 
     <nav>
-        <a href="admin_dashboard.php">
-            Dashboard
-        </a>
-        <a href="products.php">
-            Products
-        </a>
-        <a href="add_product.php">
-            Add Product
-        </a>
-        <a href="orders.php">
-            Orders
-        </a>
-        <a href="users.php">
-            Users
-        </a>
-        <a href="user_profiles.php">
-            User Profiles
-        </a>
-        <a href="user_log.php">
-            User Activity
-        </a>
-        <a href="product_reviews.php">
-            Product Reviews
-        </a>
-        <a href="bill.php" class="active">
-            Bills
-        </a>
+            <a href="admin_dashboard.php">Dashboard</a>
+            <a href="products.php">Products</a>
+            <a href="add_product.php" >Add Product</a>
+            <a href="orders.php">Orders</a>
+            <a href="users.php">Users</a>
+            <a href="user_profiles.php">User Profiles</a>
+            <a href="user_log.php">User Activity</a>
+            <a href="product_reviews.php">Product Reviews</a>
+            <a href="admin_wishlist.php">Customer Wishlist</a>
+            <a href="bill.php" class="active">Bills</a>
+            <a href="stock_management.php">Stock of Products</a>
+            <a href="stock_history.php">Stock History</a>
+            <a href="chat.php">
+                Chat<span id="adminChatBadge" class="admin-chat-badge">0
+                </span>
+            </a>
+
     </nav>
 
 
@@ -670,6 +660,7 @@ $bills = mysqli_query(
         Bills | Inknest
     </title>
     <link rel="stylesheet" href="../css/orders.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../css/admin_footer.css?v=<?php echo time(); ?>">
     <style>
         .bill-list {
             background: #fff;
@@ -786,6 +777,7 @@ $bills = mysqli_query(
         <a href="user_profiles.php">User Profiles</a>
         <a href="user_log.php">User Activity</a>
         <a href="product_reviews.php">Product Reviews</a>
+        <a href="admin_wishlist.php">Customer Wishlist</a>
         <a href="bill.php" class="active">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
@@ -883,7 +875,6 @@ $bills = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -891,7 +882,6 @@ $bills = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 Rs.
                                 <?php
@@ -902,19 +892,16 @@ $bills = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <span class="delivered-status">
                                     Delivered
                                 </span>
                             </td>
-
                             <td>
                                 <span class="paid-status">
                                     Paid
                                 </span>
                             </td>
-
                             <td>
                                 <?php
                                 echo date(
@@ -925,7 +912,6 @@ $bills = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <a href="bill.php?order_id=<?php echo (int) $bill["id"]; ?>" class="view-bill-btn">
                                     View Bill
@@ -936,7 +922,6 @@ $bills = mysqli_query(
                     </tbody>
                 </table>
             </div>
-
         <?php else: ?>
             <div class="empty">
                 <h3>

@@ -1,386 +1,453 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const followUpForm = document.getElementById("followUpForm");
+    const decreaseQty =document.getElementById("decreaseQty");
+    const increaseQty =document.getElementById("increaseQty");
+    const quantity =document.getElementById("quantity");
+    const addToCartBtn =document.getElementById("addToCartBtn");
+    const cartMessage =document.getElementById("cartMessage");
+    const wishlistBtn =document.getElementById("wishlistBtn");
+    const wishlistMessage =document.getElementById("wishlistMessage");
 
-    if (followUpForm) {
-        followUpForm.addEventListener("submit", async function (event) {
-            event.preventDefault();
-            const submitButton=document.getElementById("followUpSubmit");
-            const message=document.getElementById("followUpMessage");
-            const comment=document.getElementById("followUpComment");
-
-            if (!comment.value.trim()) {
-                message.textContent = "Please enter a comment.";
-                message.className = "follow-up-message error";
-                comment.focus();
-                return;
-            }
-
-            submitButton.disabled = true;
-            submitButton.textContent = "Adding...";
-            message.textContent = "";
-            message.className = "follow-up-message";
-            try {
-                const formData = new FormData(followUpForm);
-                const response = await fetch(
-                    "add_review_comment.php",
-                    {
-                        method: "POST",
-                        body: formData
-                    }
-                );
-                const responseText = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(responseText);
-                } catch (error) {
-                    console.error(
-                        "Invalid JSON:",
-                        responseText
-                    );
-                    throw new Error(
-                        "The server returned an invalid response."
-                    );
-                }
-
-                if (data.success) {
-                    message.textContent =data.message || "Additional comment added successfully.";
-                    message.className ="follow-up-message success";
-                    comment.value = "";
-                    setTimeout(function () {
-                        window.location.reload();
-                    }, 700);
-
-                } else {
-                    message.textContent = data.message || "Unable to add comment.";
-                    message.className = "follow-up-message error";
-                }
-            } catch (error) {
-                console.error("Comment error:", error);
-                message.textContent =error.message || "Something went wrong while adding the comment.";
-                message.className = "follow-up-message error";
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = "Add Comment";
-            }
-
-        });
-    }
-
-    const quantity = document.getElementById("quantity");
-    const decreaseButton = document.getElementById("decreaseQty");
-    const increaseButton = document.getElementById("increaseQty");
-
-    if (quantity && decreaseButton && increaseButton) {
-        decreaseButton.addEventListener(
-            "click",
-            function () {
-                let value=parseInt(quantity.value, 10) || 1;
-                const minimum = parseInt(quantity.min, 10) || 1;
-                if (value > minimum) {
-                    value--;
-                }
-                quantity.value = value;
-            }
-        );
-
-        increaseButton.addEventListener(
-            "click",
-            function () {
-                let value = parseInt(quantity.value, 10) || 1;
-                const maximum = parseInt(quantity.max, 10) || 999999;
-                if (value < maximum) {
-                    value++;
-                }
-                quantity.value = value;
-            }
-        );
-
+    if (quantity) {
         quantity.addEventListener(
-            "change",
+            "input",
             function () {
-                let value = parseInt(quantity.value, 10) || 1;
-                const minimum = parseInt(quantity.min, 10) || 1;
-                const maximum = parseInt(quantity.max, 10) || 999999;
-
-                if (value < minimum) {
-                    value = minimum;
-                }
-
-                if (value > maximum) {
-                    value = maximum;
-                }
-
-                quantity.value = value;
-            }
-        );
-    }
-
-    const addToCartButton = document.getElementById("addToCartBtn");
-    const cartMessage = document.getElementById("cartMessage");
-    const cartCount = document.getElementById("cartCount");
-
-    if (addToCartButton) {
-        addToCartButton.addEventListener(
-            "click",
-            async function () {
-                const productId =
+                let value =
                     parseInt(
-                        addToCartButton.dataset.productId,
+                        this.value,
                         10
                     );
-                let selectedQuantity = 1;
-                if (quantity) {
-                    selectedQuantity =
-                        parseInt(
-                            quantity.value,
-                            10
-                        ) || 1;
+                const min =
+                    parseInt(
+                        this.min || "1",
+                        10
+                    );
+                const max =
+                    parseInt(
+                        this.max || "999999",
+                        10
+                    );
+
+                if (isNaN(value)) {
+                    value = min;
                 }
 
-                if (productId <= 0) {
-                    if (cartMessage) {
-                        cartMessage.textContent = "Invalid product.";
-                        cartMessage.className = "cart-message error";
-                    }
+                value =
+                    Math.max(
+                        min,
+                        Math.min(
+                            value,
+                            max
+                        )
+                    );
+
+                this.value =
+                    value;
+            }
+        );
+    }
+
+    if (decreaseQty) {
+        decreaseQty.addEventListener(
+            "click",
+            function () {
+                if (!quantity) {
+                    return;
+                }
+                let value =
+                    parseInt(
+                        quantity.value,
+                        10
+                    ) || 1;
+                const min =
+                    parseInt(
+                        quantity.min || "1",
+                        10
+                    );
+                quantity.value =
+                    Math.max(
+                        min,
+                        value - 1
+                    );
+            }
+        );
+    }
+
+    if (increaseQty) {
+        increaseQty.addEventListener(
+            "click",
+            function () {
+                if (!quantity) {
+                    return;
+                }
+                let value =
+                    parseInt(
+                        quantity.value,
+                        10
+                    ) || 1;
+                const max =
+                    parseInt(
+                        quantity.max || "999999",
+                        10
+                    );
+                quantity.value =
+                    Math.min(
+                        max,
+                        value + 1
+                    );
+            }
+        );
+    }
+
+    if (addToCartBtn) {
+        addToCartBtn.addEventListener(
+            "click",
+            async function () {
+                const productId =this.dataset.productId;
+
+                const quantityValue =
+                    quantity
+                        ? parseInt(
+                            quantity.value,
+                            10
+                        ) || 1
+                        : 1;
+
+                if (!productId) {
                     return;
                 }
 
-                if (selectedQuantity <= 0) {
-                    selectedQuantity = 1;
-                }
-                addToCartButton.disabled = true;
-                addToCartButton.textContent = "Adding...";
+                this.disabled = true;
 
                 if (cartMessage) {
-                    cartMessage.textContent = "";
-                    cartMessage.className = "cart-message";
+                    cartMessage.textContent =
+                        "Adding to cart...";
                 }
 
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "product_id",
+                    productId
+                );
+
+                formData.append(
+                    "quantity",
+                    quantityValue
+                );
+
                 try {
-                    const formData = new FormData();
-                    formData.append(
-                        "product_id",
-                        productId
-                    );
 
-                    formData.append(
-                        "quantity",
-                        selectedQuantity
-                    );
+                    const response =
+                        await fetch(
+                            "cart.php",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
 
-                    const response = await fetch(
-                        "add_to_cart.php",
-                        {
-                            method: "POST",
-                            body: formData
-                        }
-                    );
+                    const text =
+                        await response.text();
 
-                    const responseText=await response.text();
-                    console.log("Add to cart response:",responseText);
                     let data;
 
                     try {
-                        data = JSON.parse(
-                            responseText
-                        );
+
+                        data =
+                            JSON.parse(text);
+
                     } catch (error) {
+
                         console.error(
-                            "Invalid JSON:",
-                            responseText
+                            "Cart response:",
+                            text
                         );
+
                         throw new Error(
-                            "Server returned an invalid response."
+                            "Invalid server response."
                         );
                     }
 
                     if (!data.success) {
-                        if (cartMessage) {
-                            cartMessage.textContent=data.message || "Could not add product.";
-                            cartMessage.className="cart-message error";
-                        }
-                        return;
-                    }
 
-                    let cart = [];
-                    try {
-                        const savedCart =
-                            localStorage.getItem(
-                                "inknestCart"
-                            );
-                        if (savedCart) {
-                            const parsedCart =JSON.parse(savedCart);
-                            if (Array.isArray(parsedCart)) {
-                                cart = parsedCart;
-                            }
-                        }
-                    } catch (error) {
-                        console.error(
-                            "Could not read cart:",
-                            error
+                        throw new Error(
+                            data.message ||
+                            "Unable to add product to cart."
                         );
-                        cart = [];
-                    }
-
-                    for (let i = 0;i < selectedQuantity;i++) {
-                        cart.push(productId);
-                    }
-
-                    localStorage.setItem(
-                        "inknestCart",
-                        JSON.stringify(cart)
-                    );
-
-                    if (cartCount) {
-                        cartCount.textContent = cart.length;
                     }
 
                     if (cartMessage) {
-                        cartMessage.textContent=data.message || "Product added to cart.";
-                        cartMessage.className="cart-message success";
-                    }
-                    addToCartButton.textContent ="Added to Cart";
 
-                    if (typeof data.stock !== "undefined") {
-                        const stockInfo=document.querySelector(
-                                ".stock-info"
-                            );
-                        if (stockInfo) {
-                            const newStock =
-                                parseInt(
-                                    data.stock,
-                                    10
-                                ) || 0;
-                            if (newStock > 0) {
-                                stockInfo.innerHTML =
-                                    '<span class="in-stock">' +
-                                    'In Stock' +
-                                    '</span>' +
-                                    '<span>' +
-                                    newStock +
-                                    ' available' +
-                                    '</span>';
-                            } else {
-                                stockInfo.innerHTML =
-                                    '<span class="out-stock">' +
-                                    'Out of Stock' +
-                                    '</span>';
-                                addToCartButton.disabled=true;
-                                addToCartButton.textContent="Out of Stock";
-
-                                if (quantity) {
-                                    quantity.disabled = true;
-                                }
-
-                                if (decreaseButton) {
-                                    decreaseButton.disabled = true;
-                                }
-
-                                if (increaseButton) {
-                                    increaseButton.disabled = true;
-                                }
-                            }
-                        }
-
-                        if (quantity) {
-                            quantity.max=data.stock;
-
-                            if (parseInt(quantity.value, 10)>parseInt(data.stock, 10)) {
-                                quantity.value=data.stock;
-                            }
-                        }
+                        cartMessage.textContent =
+                            data.message ||
+                            "Product added to cart.";
                     }
 
-                    setTimeout(function () {
-                        if (addToCartButton && !addToCartButton.disabled) {
-                            addToCartButton.textContent = "Add to Cart";
-                        }
-                    }, 1200);
+                    const cartCount =
+                        document.getElementById(
+                            "cartCount"
+                        );
+
+                    if (
+                        cartCount &&
+                        data.cartCount !== undefined
+                    ) {
+
+                        cartCount.textContent =
+                            data.cartCount;
+                    }
 
                 } catch (error) {
+
                     console.error(
                         "Add to cart error:",
                         error
                     );
 
-
                     if (cartMessage) {
-                        cartMessage.textContent=error.message || "Something went wrong while adding to cart.";
-                        cartMessage.className= "cart-message error";
+
+                        cartMessage.textContent =
+                            error.message ||
+                            "Unable to add product to cart.";
                     }
 
                 } finally {
-                    if (addToCartButton.textContent !=="Out of Stock") {
-                        addToCartButton.disabled = false;
-                    }
-                }
 
+                    this.disabled = false;
+                }
             }
         );
     }
 
-    if (cartCount) {
-        let cart = [];
-        try {
-            const savedCart =
-                localStorage.getItem(
-                    "inknestCart"
+    if (wishlistBtn) {
+
+        wishlistBtn.addEventListener(
+            "click",
+            async function () {
+
+                const productId =
+                    this.dataset.productId;
+
+                if (
+                    !productId ||
+                    this.disabled
+                ) {
+                    return;
+                }
+
+                this.disabled = true;
+
+                if (wishlistMessage) {
+                    wishlistMessage.textContent =
+                        "Updating wishlist...";
+                }
+
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "product_id",
+                    productId
                 );
-            if (savedCart) {
-                const parsedCart =
-                    JSON.parse(savedCart);
-                if (Array.isArray(parsedCart)) {
-                    cart = parsedCart;
-                }
-            }
-        } catch (error) {
-            console.error(
-                "Could not load cart count:",
-                error
-            );
-        }
-        cartCount.textContent = cart.length;
-    }
 
-    const ratingInputs =
-        document.querySelectorAll(
-            '.rating-input input[name="rating"]'
-        );
+                try {
 
-    const ratingLabels =
-        document.querySelectorAll(
-            ".rating-input label"
-        );
+                    const response =
+                        await fetch(
+                            "wishlist.php",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
 
-    if (ratingInputs.length > 0 && ratingLabels.length > 0) {
-        ratingInputs.forEach(function (input) {
-            input.addEventListener(
-                "change",
-                function () {
-                    ratingLabels.forEach(
-                        function (label) {
-                            label.classList.remove(
-                                "selected"
-                            );
-                        }
+                    const text =
+                        await response.text();
+
+                    console.log(
+                        "wishlist.php response:",
+                        text
                     );
 
-                    const selectedLabel =
-                        document.querySelector(
-                            'label[for="' +
-                            input.id +
-                            '"]'
-                        );
+                    let data;
 
-                    if (selectedLabel) {
-                        selectedLabel.classList.add(
-                            "selected"
+                    try {
+
+                        data =
+                            JSON.parse(text);
+
+                    } catch (error) {
+
+                        throw new Error(
+                            "Invalid server response."
                         );
                     }
-                }
-            );
 
-        });
+                    if (!data.success) {
+
+                        throw new Error(
+                            data.message ||
+                            "Unable to update wishlist."
+                        );
+                    }
+
+                    this.textContent =
+                        data.wishlisted
+                            ? "♥ Wishlisted"
+                            : "♡ Wishlist";
+
+                    if (wishlistMessage) {
+
+                        wishlistMessage.textContent =
+                            data.message || "";
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Wishlist error:",
+                        error
+                    );
+
+                    if (wishlistMessage) {
+
+                        wishlistMessage.textContent =
+                            error.message ||
+                            "Unable to update wishlist.";
+                    }
+
+                } finally {
+
+                    this.disabled = false;
+                }
+            }
+        );
+    }
+
+    const followUpForm =
+        document.getElementById(
+            "followUpForm"
+        );
+
+    const followUpMessage =
+        document.getElementById(
+            "followUpMessage"
+        );
+
+    const followUpSubmit =
+        document.getElementById(
+            "followUpSubmit"
+        );
+
+    if (followUpForm) {
+
+        followUpForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                if (followUpSubmit) {
+                    followUpSubmit.disabled = true;
+                }
+
+                if (followUpMessage) {
+                    followUpMessage.textContent =
+                        "Adding comment...";
+                }
+
+                const formData =
+                    new FormData(
+                        followUpForm
+                    );
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "submit_followup_comment.php",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+
+                    const text =
+                        await response.text();
+
+                    let data;
+
+                    try {
+
+                        data =
+                            JSON.parse(text);
+
+                    } catch (error) {
+
+                        console.error(
+                            "Follow-up response:",
+                            text
+                        );
+
+                        throw new Error(
+                            "Invalid server response."
+                        );
+                    }
+
+                    if (!data.success) {
+
+                        throw new Error(
+                            data.message ||
+                            "Unable to add comment."
+                        );
+                    }
+
+                    if (followUpMessage) {
+
+                        followUpMessage.textContent =
+                            data.message ||
+                            "Comment added successfully.";
+                    }
+
+                    const textarea =
+                        document.getElementById(
+                            "followUpComment"
+                        );
+
+                    if (textarea) {
+                        textarea.value = "";
+                    }
+
+                    setTimeout(
+                        function () {
+                            window.location.reload();
+                        },
+                        700
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Follow-up comment error:",
+                        error
+                    );
+
+                    if (followUpMessage) {
+
+                        followUpMessage.textContent =
+                            error.message ||
+                            "Unable to add comment.";
+                    }
+
+                } finally {
+
+                    if (followUpSubmit) {
+                        followUpSubmit.disabled = false;
+                    }
+                }
+            }
+        );
     }
 
 });
