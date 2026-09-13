@@ -13,8 +13,8 @@ function sendOtpEmail(
         $mail->isSMTP();
         $mail->Host = "smtp.gmail.com";
         $mail->SMTPAuth = true;
-        $mail->Username = "shresthashreyana25@gmail.com";
-        $mail->Password = "kjtoqkxmxrorvhnh";
+        $mail->Username = "da9000913@gmail.com";
+        $mail->Password = "aajaunwqxqavvtra";
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
         $mail->setFrom(
