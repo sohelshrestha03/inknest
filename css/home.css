@@ -2,13 +2,19 @@
     box-sizing: border-box;
 }
 
+html {
+    min-height: 100%;
+}
+
 body {
     margin: 0;
     padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     font-family: Arial, sans-serif;
     background: #f7f7f7;
     color: #111;
-    min-height: 100vh;
 }
 
 .navbar {
@@ -20,6 +26,7 @@ body {
     display: flex;
     align-items: center;
     gap: 30px;
+    flex-shrink: 0;
 }
 
 .navbar h1 {
@@ -50,7 +57,7 @@ body {
 }
 
 .search input:focus {
-    border-color: #bbb;
+    border-color: #999;
 }
 
 .search button {
@@ -62,6 +69,7 @@ body {
     color: #fff;
     font-size: 14px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .search button:hover {
@@ -142,6 +150,15 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 30px 25px 50px;
+    flex: 1;
+}
+
+.products-section {
+    width: 100%;
+}
+
+.products-section + .products-section {
+    margin-top: 40px;
 }
 
 .heading {
@@ -169,7 +186,6 @@ body {
     width: 100%;
     min-width: 0;
     height: 100%;
-    align-self: stretch;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 10px;
@@ -337,9 +353,13 @@ body {
 }
 
 .no-products {
-    grid-column: 1 / -1;
     width: 100%;
+    min-height: 250px;
     padding: 50px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
 }
 
@@ -354,47 +374,13 @@ body {
     font-size: 14px;
 }
 
-.inknest-chat-button {
-    position: fixed;
-    right: 25px;
-    bottom: 25px;
-    width: 55px;
-    height: 55px;
-    border: none;
-    border-radius: 50%;
-    background: #111;
-    color: #fff;
-    cursor: pointer;
-    z-index: 1000;
-}
-
-.inknest-chat-badge {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    min-width: 19px;
-    height: 19px;
-    padding: 0 5px;
-    border-radius: 10px;
-    background: #c62828;
-    color: #fff;
-    font-size: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.inknest-chat-box {
-    z-index: 1000;
-}
-
 .footer {
-    margin-top: 60px;
+    width: 100%;
+    margin-top: auto;
+    padding: 35px 45px 18px;
     background: #111;
     color: #fff;
-    width: 100%;
-    padding: 35px 45px 18px;
-    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .footer-content {
@@ -466,55 +452,38 @@ body {
     font-size: 12px;
 }
 
-@media (max-width: 700px) {
-
-    .footer {
-        padding: 30px 20px 15px;
-    }
-
-    .footer-content {
-        flex-direction: column;
-        gap: 25px;
-    }
-
-    .footer-links {
-        justify-content: flex-start;
-        width: 100%;
-    }
-
-    .footer-contact {
-        min-width: 0;
-    }
-
-    .footer-bottom {
-        margin-top: 20px;
-    }
-
+.inknest-chat-button {
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+    width: 55px;
+    height: 55px;
+    border: none;
+    border-radius: 50%;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+    z-index: 1000;
 }
 
-@media (max-width: 450px) {
+.inknest-chat-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: #c62828;
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-    .footer {
-        padding: 25px 16px 14px;
-    }
-
-    .footer-brand h2 {
-        font-size: 22px;
-    }
-
-    .footer-brand p,
-    .footer-contact p {
-        font-size: 13px;
-    }
-
-    .footer-contact h3 {
-        font-size: 16px;
-    }
-
-    .footer-bottom p {
-        font-size: 11px;
-    }
-
+.inknest-chat-box {
+    z-index: 1000;
 }
 
 @media (max-width: 1100px) {
@@ -609,9 +578,54 @@ body {
         font-size: 20px;
     }
 
+    .footer {
+        padding: 30px 20px 15px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .footer-links {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .footer-contact {
+        min-width: 0;
+    }
+
+    .footer-bottom {
+        margin-top: 20px;
+    }
+
     .inknest-chat-button {
         right: 18px;
         bottom: 18px;
+    }
+}
+
+@media (max-width: 450px) {
+    .footer {
+        padding: 25px 16px 14px;
+    }
+
+    .footer-brand h2 {
+        font-size: 22px;
+    }
+
+    .footer-brand p,
+    .footer-contact p {
+        font-size: 13px;
+    }
+
+    .footer-contact h3 {
+        font-size: 16px;
+    }
+
+    .footer-bottom p {
+        font-size: 11px;
     }
 }
 

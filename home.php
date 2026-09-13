@@ -1,10 +1,10 @@
 <?php
 session_start();
+
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 header("Expires: 0");
-
 
 include "config/database.php";
 require_once "config/recommendation.php";
@@ -14,37 +14,28 @@ if (!isset($_SESSION["user_id"])) {
     exit();
 }
 
-$userId = (int)$_SESSION["user_id"];
+$userId = (int) $_SESSION["user_id"];
 $username = $_SESSION["username"] ?? "";
 $profilePicture = "";
 
-$profileSql = mysqli_prepare(
+$profileStmt = mysqli_prepare(
     $conn,
     "SELECT profile_picture
      FROM user_profiles
-     WHERE user_id = ?"
+     WHERE user_id = ?
+     LIMIT 1"
 );
 
-if ($profileSql) {
+if ($profileStmt) {
+    mysqli_stmt_bind_param($profileStmt, "i", $userId);
+    mysqli_stmt_execute($profileStmt);
+    mysqli_stmt_bind_result($profileStmt, $profilePictureValue);
 
-    mysqli_stmt_bind_param(
-        $profileSql,
-        "i",
-        $userId
-    );
-
-    mysqli_stmt_execute($profileSql);
-
-    mysqli_stmt_bind_result(
-        $profileSql,
-        $profilePictureValue
-    );
-
-    if (mysqli_stmt_fetch($profileSql)) {
+    if (mysqli_stmt_fetch($profileStmt)) {
         $profilePicture = $profilePictureValue ?? "";
     }
 
-    mysqli_stmt_close($profileSql);
+    mysqli_stmt_close($profileStmt);
 }
 
 $wishlistProducts = [];
@@ -57,42 +48,42 @@ $wishlistStmt = mysqli_prepare(
 );
 
 if ($wishlistStmt) {
-
-    mysqli_stmt_bind_param(
-        $wishlistStmt,
-        "i",
-        $userId
-    );
-
+    mysqli_stmt_bind_param($wishlistStmt, "i", $userId);
     mysqli_stmt_execute($wishlistStmt);
-
-    mysqli_stmt_bind_result(
-        $wishlistStmt,
-        $wishlistProductId
-    );
+    mysqli_stmt_bind_result($wishlistStmt, $wishlistProductId);
 
     while (mysqli_stmt_fetch($wishlistStmt)) {
-        $wishlistProducts[(int)$wishlistProductId] = true;
+        $wishlistProducts[(int) $wishlistProductId] = true;
     }
 
     mysqli_stmt_close($wishlistStmt);
 }
 
-$recommendedProducts = getRecommendedProducts(
-    $conn,
-    $userId,
-    8
-);
+$recommendedProducts = [];
 
-$search = "";
+try {
+    $recommendedProducts = getRecommendedProducts(
+        $conn,
+        $userId,
+        8
+    );
 
-if (isset($_GET["search"])) {
-    $search = trim($_GET["search"]);
+    if (!is_array($recommendedProducts)) {
+        $recommendedProducts = [];
+    }
+} catch (Throwable $e) {
+    $recommendedProducts = [];
 }
+
+$search = isset($_GET["search"])
+    ? trim($_GET["search"])
+    : "";
+
+$products = [];
 
 if ($search !== "") {
 
-    $sql = mysqli_prepare(
+    $stmt = mysqli_prepare(
         $conn,
         "SELECT
             id,
@@ -104,56 +95,45 @@ if ($search !== "") {
          FROM products
          WHERE product_name LIKE ?
             OR description LIKE ?
-         ORDER BY id DESC"
+         ORDER BY id DESC
+         LIMIT 50"
     );
 
-    if (!$sql) {
-        die("Product query failed.");
+    if (!$stmt) {
+        die(
+            "Search query failed: " .
+            htmlspecialchars(
+                mysqli_error($conn),
+                ENT_QUOTES,
+                "UTF-8"
+            )
+        );
     }
 
     $searchTerm = "%" . $search . "%";
 
     mysqli_stmt_bind_param(
-        $sql,
+        $stmt,
         "ss",
         $searchTerm,
         $searchTerm
     );
 
-    if (!mysqli_stmt_execute($sql)) {
-        mysqli_stmt_close($sql);
-        die("Product query failed.");
+    mysqli_stmt_execute($stmt);
+
+    $result = mysqli_stmt_get_result($stmt);
+
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $products[] = $row;
+        }
     }
 
-    mysqli_stmt_bind_result(
-        $sql,
-        $searchId,
-        $searchProductName,
-        $searchDescription,
-        $searchPrice,
-        $searchImage,
-        $searchStock
-    );
-
-    $products = [];
-
-    while (mysqli_stmt_fetch($sql)) {
-
-        $products[] = [
-            "id" => (int)$searchId,
-            "product_name" => $searchProductName,
-            "description" => $searchDescription,
-            "price" => (float)$searchPrice,
-            "image" => $searchImage,
-            "stock" => (int)$searchStock
-        ];
-    }
-
-    mysqli_stmt_close($sql);
+    mysqli_stmt_close($stmt);
 
 } else {
 
-    $products = mysqli_query(
+    $result = mysqli_query(
         $conn,
         "SELECT
             id,
@@ -166,11 +146,184 @@ if ($search !== "") {
          ORDER BY id DESC"
     );
 
-    if (!$products) {
-        die("Product query failed.");
+    if (!$result) {
+        die(
+            "Product query failed: " .
+            htmlspecialchars(
+                mysqli_error($conn),
+                ENT_QUOTES,
+                "UTF-8"
+            )
+        );
+    }
+
+    while ($row = mysqli_fetch_assoc($result)) {
+        $products[] = $row;
     }
 }
 
+function renderProductCard(
+    array $product,
+    array $wishlistProducts
+): void {
+
+    $productId = (int) ($product["id"] ?? 0);
+    $stock = (int) ($product["stock"] ?? 0);
+    $productName = $product["product_name"] ?? "";
+    $description = $product["description"] ?? "";
+    $price = (float) ($product["price"] ?? 0);
+    $image = $product["image"] ?? "";
+    $isWishlisted = isset($wishlistProducts[$productId]);
+
+    $imagePath = "";
+
+    if (!empty($image)) {
+        if (
+            str_starts_with($image, "images/products/")
+        ) {
+            $imagePath = $image;
+        } else {
+            $imagePath = "images/products/" . $image;
+        }
+    }
+?>
+
+<div class="product-card">
+
+    <a
+        href="product_details.php?id=<?php echo $productId; ?>"
+        class="product-link"
+    >
+
+        <div class="product-image">
+
+            <?php if (!empty($imagePath)): ?>
+
+                <img
+                    src="<?php
+                        echo htmlspecialchars(
+                            $imagePath,
+                            ENT_QUOTES,
+                            "UTF-8"
+                        );
+                    ?>"
+                    alt="<?php
+                        echo htmlspecialchars(
+                            $productName,
+                            ENT_QUOTES,
+                            "UTF-8"
+                        );
+                    ?>"
+                >
+
+            <?php else: ?>
+
+                <div class="no-image">
+                    No Image
+                </div>
+
+            <?php endif; ?>
+
+        </div>
+
+        <div class="product-info">
+
+            <h3>
+                <?php
+                echo htmlspecialchars(
+                    $productName,
+                    ENT_QUOTES,
+                    "UTF-8"
+                );
+                ?>
+            </h3>
+
+            <p>
+                <?php
+                echo htmlspecialchars(
+                    $description,
+                    ENT_QUOTES,
+                    "UTF-8"
+                );
+                ?>
+            </p>
+
+        </div>
+
+    </a>
+
+    <div class="product-bottom">
+
+        <div class="product-details">
+
+            <div class="product-price">
+                Rs.
+                <?php echo number_format($price, 2); ?>
+            </div>
+
+            <?php if ($stock > 0): ?>
+
+                <div class="stock available">
+                    Available:
+                    <strong>
+                        <?php echo $stock; ?>
+                    </strong>
+                </div>
+
+            <?php else: ?>
+
+                <div class="stock out-of-stock">
+                    Out of Stock
+                </div>
+
+            <?php endif; ?>
+
+        </div>
+
+        <div class="product-actions">
+
+            <button
+                type="button"
+                class="wishlist-btn"
+                data-id="<?php echo $productId; ?>"
+            >
+                <?php
+                echo $isWishlisted
+                    ? "♥ Wishlisted"
+                    : "♡ Wishlist";
+                ?>
+            </button>
+
+            <?php if ($stock > 0): ?>
+
+                <button
+                    type="button"
+                    class="add-cart"
+                    data-id="<?php echo $productId; ?>"
+                >
+                    Add to Cart
+                </button>
+
+            <?php else: ?>
+
+                <button
+                    type="button"
+                    class="add-cart disabled"
+                    disabled
+                >
+                    Out of Stock
+                </button>
+
+            <?php endif; ?>
+
+        </div>
+
+    </div>
+
+</div>
+
+<?php
+}
 ?>
 
 <!DOCTYPE html>
@@ -185,13 +338,16 @@ if ($search !== "") {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>
-        Home | Inknest
-    </title>
+    <title>Home | Inknest</title>
 
     <link
         rel="stylesheet"
         href="css/home.css?v=<?php echo time(); ?>"
+    >
+
+    <link
+        rel="stylesheet"
+        href="css/chat.css?v=<?php echo time(); ?>"
     >
 
     <script
@@ -205,13 +361,11 @@ if ($search !== "") {
 
 <nav class="navbar">
 
-    <h1>
-        Inknest
-    </h1>
+    <h1>Inknest</h1>
 
     <form
         class="search"
-        method="get"
+        method="GET"
         action="home.php"
     >
 
@@ -219,11 +373,13 @@ if ($search !== "") {
             type="text"
             name="search"
             placeholder="Search products..."
-            value="<?php echo htmlspecialchars(
-                $search,
-                ENT_QUOTES,
-                "UTF-8"
-            ); ?>"
+            value="<?php
+                echo htmlspecialchars(
+                    $search,
+                    ENT_QUOTES,
+                    "UTF-8"
+                );
+            ?>"
         >
 
         <button type="submit">
@@ -239,11 +395,13 @@ if ($search !== "") {
             <?php if (!empty($profilePicture)): ?>
 
                 <img
-                    src="images/profile/<?php echo htmlspecialchars(
-                        $profilePicture,
-                        ENT_QUOTES,
-                        "UTF-8"
-                    ); ?>"
+                    src="images/profile/<?php
+                        echo htmlspecialchars(
+                            $profilePicture,
+                            ENT_QUOTES,
+                            "UTF-8"
+                        );
+                    ?>"
                     alt="Profile Picture"
                     class="profile-picture"
                 >
@@ -253,14 +411,16 @@ if ($search !== "") {
                 <div class="profile-placeholder">
 
                     <?php
+                    $firstLetter = strtoupper(
+                        substr(
+                            trim($username),
+                            0,
+                            1
+                        )
+                    );
+
                     echo htmlspecialchars(
-                        strtoupper(
-                            substr(
-                                trim($username),
-                                0,
-                                1
-                            )
-                        ),
+                        $firstLetter,
                         ENT_QUOTES,
                         "UTF-8"
                     );
@@ -271,9 +431,7 @@ if ($search !== "") {
             <?php endif; ?>
 
             <span class="username">
-
                 Hi,
-
                 <?php
                 echo htmlspecialchars(
                     $username,
@@ -281,7 +439,6 @@ if ($search !== "") {
                     "UTF-8"
                 );
                 ?>
-
             </span>
 
         </div>
@@ -290,16 +447,9 @@ if ($search !== "") {
             Manage Profile
         </a>
 
-        <a
-            href="cart.php"
-            class="cart"
-        >
+        <a href="cart.php" class="cart">
             Cart
-
-            <span id="cartCount">
-                0
-            </span>
-
+            <span id="cartCount">0</span>
         </a>
 
         <a href="logout.php">
@@ -317,606 +467,105 @@ if ($search !== "") {
         !empty($recommendedProducts)
     ): ?>
 
-        <div class="heading">
+        <section class="products-section">
 
-            <h2>
-                Recommended for You
-            </h2>
+            <div class="heading">
+                <h2>Recommended for You</h2>
+            </div>
 
-        </div>
+            <div class="product-grid">
 
-        <div class="product-grid">
+                <?php foreach (
+                    $recommendedProducts
+                    as $product
+                ): ?>
 
-            <?php foreach (
-                $recommendedProducts
-                as $product
-            ): ?>
-
-                <?php
-
-                $productId =
-                    (int)$product["id"];
-
-                $stock =
-                    (int)$product["stock"];
-
-                $isWishlisted =
-                    isset(
-                        $wishlistProducts[
-                            $productId
-                        ]
+                    <?php
+                    renderProductCard(
+                        $product,
+                        $wishlistProducts
                     );
+                    ?>
 
-                ?>
+                <?php endforeach; ?>
 
-                <div class="product-card">
+            </div>
 
-                    <a
-                        href="product_details.php?id=<?php echo $productId; ?>"
-                        class="product-link"
-                    >
-
-                        <div class="product-image">
-
-                            <?php if (
-                                !empty($product["image"])
-                            ): ?>
-
-                                <img
-                                    src="images/products/<?php echo htmlspecialchars(
-                                        $product["image"],
-                                        ENT_QUOTES,
-                                        "UTF-8"
-                                    ); ?>"
-                                    alt="<?php echo htmlspecialchars(
-                                        $product["product_name"],
-                                        ENT_QUOTES,
-                                        "UTF-8"
-                                    ); ?>"
-                                >
-
-                            <?php else: ?>
-
-                                <div class="no-image">
-                                    No Image
-                                </div>
-
-                            <?php endif; ?>
-
-                        </div>
-
-                        <div class="product-info">
-
-                            <h3>
-
-                                <?php
-                                echo htmlspecialchars(
-                                    $product["product_name"],
-                                    ENT_QUOTES,
-                                    "UTF-8"
-                                );
-                                ?>
-
-                            </h3>
-
-                            <p>
-
-                                <?php
-                                echo htmlspecialchars(
-                                    $product["description"] ?? "",
-                                    ENT_QUOTES,
-                                    "UTF-8"
-                                );
-                                ?>
-
-                            </p>
-
-                        </div>
-
-                    </a>
-
-                    <div class="product-bottom">
-
-                        <div class="product-details">
-
-                            <div class="product-price">
-
-                                Rs.
-
-                                <?php
-                                echo number_format(
-                                    (float)$product["price"],
-                                    2
-                                );
-                                ?>
-
-                            </div>
-
-                            <?php if ($stock > 0): ?>
-
-                                <div class="stock available">
-
-                                    Available:
-
-                                    <strong>
-                                        <?php echo $stock; ?>
-                                    </strong>
-
-                                </div>
-
-                            <?php else: ?>
-
-                                <div class="stock out-of-stock">
-                                    Out of Stock
-                                </div>
-
-                            <?php endif; ?>
-
-                        </div>
-
-                        <div class="product-actions">
-
-                            <button
-                                type="button"
-                                class="wishlist-btn"
-                                data-id="<?php echo $productId; ?>"
-                            >
-                                <?php
-                                echo $isWishlisted
-                                    ? "♥ Wishlisted"
-                                    : "♡ Wishlist";
-                                ?>
-                            </button>
-
-                            <?php if ($stock > 0): ?>
-
-                                <button
-                                    type="button"
-                                    class="add-cart"
-                                    data-id="<?php echo $productId; ?>"
-                                >
-                                    Add to Cart
-                                </button>
-
-                            <?php else: ?>
-
-                                <button
-                                    type="button"
-                                    class="add-cart disabled"
-                                    disabled
-                                >
-                                    Out of Stock
-                                </button>
-
-                            <?php endif; ?>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            <?php endforeach; ?>
-
-        </div>
+        </section>
 
     <?php endif; ?>
 
+    <section class="products-section">
 
-    <div class="heading">
+        <div class="heading">
 
-        <?php if ($search !== ""): ?>
+            <?php if ($search !== ""): ?>
 
-            <h2>
+                <h2>
+                    Search results for
+                    "<?php
+                    echo htmlspecialchars(
+                        $search,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
+                    ?>"
+                </h2>
 
-                Search results for
+            <?php else: ?>
 
-                "<?php echo htmlspecialchars(
-                    $search,
-                    ENT_QUOTES,
-                    "UTF-8"
-                ); ?>"
+                <h2>Products</h2>
 
-            </h2>
+            <?php endif; ?>
 
-        <?php else: ?>
+        </div>
 
-            <h2>
-                Products
-            </h2>
+        <?php if (!empty($products)): ?>
 
-        <?php endif; ?>
-
-    </div>
-
-
-    <div class="product-grid">
-
-        <?php if ($search !== ""): ?>
-
-            <?php if (!empty($products)): ?>
+            <div class="product-grid">
 
                 <?php foreach ($products as $product): ?>
 
                     <?php
-
-                    $productId =
-                        (int)$product["id"];
-
-                    $stock =
-                        (int)$product["stock"];
-
-                    $isWishlisted =
-                        isset(
-                            $wishlistProducts[
-                                $productId
-                            ]
-                        );
-
+                    renderProductCard(
+                        $product,
+                        $wishlistProducts
+                    );
                     ?>
-
-                    <div class="product-card">
-
-                        <a
-                            href="product_details.php?id=<?php echo $productId; ?>"
-                            class="product-link"
-                        >
-
-                            <div class="product-image">
-
-                                <?php if (
-                                    !empty($product["image"])
-                                ): ?>
-
-                                    <img
-                                        src="images/products/<?php echo htmlspecialchars(
-                                            $product["image"],
-                                            ENT_QUOTES,
-                                            "UTF-8"
-                                        ); ?>"
-                                        alt="<?php echo htmlspecialchars(
-                                            $product["product_name"],
-                                            ENT_QUOTES,
-                                            "UTF-8"
-                                        ); ?>"
-                                    >
-
-                                <?php else: ?>
-
-                                    <div class="no-image">
-                                        No Image
-                                    </div>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                            <div class="product-info">
-
-                                <h3>
-
-                                    <?php
-                                    echo htmlspecialchars(
-                                        $product["product_name"],
-                                        ENT_QUOTES,
-                                        "UTF-8"
-                                    );
-                                    ?>
-
-                                </h3>
-
-                                <p>
-
-                                    <?php
-                                    echo htmlspecialchars(
-                                        $product["description"] ?? "",
-                                        ENT_QUOTES,
-                                        "UTF-8"
-                                    );
-                                    ?>
-
-                                </p>
-
-                            </div>
-
-                        </a>
-
-                        <div class="product-bottom">
-
-                            <div class="product-details">
-
-                                <div class="product-price">
-
-                                    Rs.
-
-                                    <?php
-                                    echo number_format(
-                                        (float)$product["price"],
-                                        2
-                                    );
-                                    ?>
-
-                                </div>
-
-                                <?php if ($stock > 0): ?>
-
-                                    <div class="stock available">
-
-                                        Available:
-
-                                        <strong>
-                                            <?php echo $stock; ?>
-                                        </strong>
-
-                                    </div>
-
-                                <?php else: ?>
-
-                                    <div class="stock out-of-stock">
-                                        Out of Stock
-                                    </div>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                            <div class="product-actions">
-
-                                <button
-                                    type="button"
-                                    class="wishlist-btn"
-                                    data-id="<?php echo $productId; ?>"
-                                >
-                                    <?php
-                                    echo $isWishlisted
-                                        ? "♥ Wishlisted"
-                                        : "♡ Wishlist";
-                                    ?>
-                                </button>
-
-                                <?php if ($stock > 0): ?>
-
-                                    <button
-                                        type="button"
-                                        class="add-cart"
-                                        data-id="<?php echo $productId; ?>"
-                                    >
-                                        Add to Cart
-                                    </button>
-
-                                <?php else: ?>
-
-                                    <button
-                                        type="button"
-                                        class="add-cart disabled"
-                                        disabled
-                                    >
-                                        Out of Stock
-                                    </button>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                        </div>
-
-                    </div>
 
                 <?php endforeach; ?>
 
-            <?php else: ?>
-
-                <div class="no-products">
-
-                    <h3>
-                        No products found
-                    </h3>
-
-                    <p>
-                        Try searching for another product.
-                    </p>
-
-                </div>
-
-            <?php endif; ?>
+            </div>
 
         <?php else: ?>
 
-            <?php if (mysqli_num_rows($products) > 0): ?>
+            <div class="no-products">
 
-                <?php while (
-                    $product =
-                    mysqli_fetch_assoc($products)
-                ): ?>
+                <h3>
+                    No products found
+                </h3>
 
-                    <?php
+                <p>
 
-                    $productId =
-                        (int)$product["id"];
+                    <?php if ($search !== ""): ?>
 
-                    $stock =
-                        (int)$product["stock"];
-
-                    $isWishlisted =
-                        isset(
-                            $wishlistProducts[
-                                $productId
-                            ]
-                        );
-
-                    ?>
-
-                    <div class="product-card">
-
-                        <a
-                            href="product_details.php?id=<?php echo $productId; ?>"
-                            class="product-link"
-                        >
-
-                            <div class="product-image">
-
-                                <?php if (
-                                    !empty($product["image"])
-                                ): ?>
-
-                                    <img
-                                        src="images/products/<?php echo htmlspecialchars(
-                                            $product["image"],
-                                            ENT_QUOTES,
-                                            "UTF-8"
-                                        ); ?>"
-                                        alt="<?php echo htmlspecialchars(
-                                            $product["product_name"],
-                                            ENT_QUOTES,
-                                            "UTF-8"
-                                        ); ?>"
-                                    >
-
-                                <?php else: ?>
-
-                                    <div class="no-image">
-                                        No Image
-                                    </div>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                            <div class="product-info">
-
-                                <h3>
-
-                                    <?php
-                                    echo htmlspecialchars(
-                                        $product["product_name"],
-                                        ENT_QUOTES,
-                                        "UTF-8"
-                                    );
-                                    ?>
-
-                                </h3>
-
-                                <p>
-
-                                    <?php
-                                    echo htmlspecialchars(
-                                        $product["description"] ?? "",
-                                        ENT_QUOTES,
-                                        "UTF-8"
-                                    );
-                                    ?>
-
-                                </p>
-
-                            </div>
-
-                        </a>
-
-                        <div class="product-bottom">
-
-                            <div class="product-details">
-
-                                <div class="product-price">
-
-                                    Rs.
-
-                                    <?php
-                                    echo number_format(
-                                        (float)$product["price"],
-                                        2
-                                    );
-                                    ?>
-
-                                </div>
-
-                                <?php if ($stock > 0): ?>
-
-                                    <div class="stock available">
-
-                                        Available:
-
-                                        <strong>
-                                            <?php echo $stock; ?>
-                                        </strong>
-
-                                    </div>
-
-                                <?php else: ?>
-
-                                    <div class="stock out-of-stock">
-                                        Out of Stock
-                                    </div>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                            <div class="product-actions">
-
-                                <button
-                                    type="button"
-                                    class="wishlist-btn"
-                                    data-id="<?php echo $productId; ?>"
-                                >
-                                    <?php
-                                    echo $isWishlisted
-                                        ? "♥ Wishlisted"
-                                        : "♡ Wishlist";
-                                    ?>
-                                </button>
-
-                                <?php if ($stock > 0): ?>
-
-                                    <button
-                                        type="button"
-                                        class="add-cart"
-                                        data-id="<?php echo $productId; ?>"
-                                    >
-                                        Add to Cart
-                                    </button>
-
-                                <?php else: ?>
-
-                                    <button
-                                        type="button"
-                                        class="add-cart disabled"
-                                        disabled
-                                    >
-                                        Out of Stock
-                                    </button>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                <?php endwhile; ?>
-
-            <?php else: ?>
-
-                <div class="no-products">
-
-                    <h3>
-                        No products found
-                    </h3>
-
-                    <p>
                         Try searching for another product.
-                    </p>
 
-                </div>
+                    <?php else: ?>
 
-            <?php endif; ?>
+                        No products are available right now.
+
+                    <?php endif; ?>
+
+                </p>
+
+            </div>
 
         <?php endif; ?>
 
-    </div>
+    </section>
 
 </main>
-
 
 <button
     type="button"
@@ -934,7 +583,6 @@ if ($search !== "") {
     </span>
 
 </button>
-
 
 <div
     class="inknest-chat-box"
@@ -999,41 +647,63 @@ if ($search !== "") {
 
 </div>
 
-
-<link rel="stylesheet" href="css/chat.css?v=<?php echo time(); ?>">
 <script src="js/chat.js?v=<?php echo time(); ?>"></script>
+
 <footer class="footer">
+
     <div class="footer-content">
+
         <div class="footer-brand">
+
             <h2>Inknest</h2>
+
             <p>
                 Your trusted online shopping destination.
             </p>
+
         </div>
+
         <div class="footer-links">
+
             <div class="footer-contact">
-                <h3>Contact Us</h3>
+
+                <h3>
+                    Contact Us
+                </h3>
+
                 <p>
                     <strong>Phone:</strong>
                     +977-9800000000
                 </p>
+
                 <p>
                     <strong>Email:</strong>
                     support@inknest.com
                 </p>
+
                 <p>
                     <strong>Address:</strong>
                     Kathmandu, Nepal
                 </p>
+
             </div>
+
         </div>
+
     </div>
+
     <div class="footer-bottom">
+
         <p>
-            &copy; <?php echo date("Y"); ?> Inknest.
+            &copy;
+            <?php echo date("Y"); ?>
+            Inknest.
             All rights reserved.
         </p>
+
     </div>
+
 </footer>
+
 </body>
 </html>
