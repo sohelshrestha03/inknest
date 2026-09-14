@@ -28,10 +28,7 @@ if ($commentId <= 0) {
     exit();
 }
 
-/*
- * Only additional comments can be deleted.
- * The original review has parent_review_id = NULL.
- */
+
 $stmt = mysqli_prepare(
     $conn,
     "DELETE FROM product_reviews

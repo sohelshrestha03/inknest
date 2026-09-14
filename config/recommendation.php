@@ -20,25 +20,28 @@ function getRecommendedProducts(
             stock
         FROM products
         WHERE stock > 0
+          AND is_deleted = 0
     ";
 
-    $productResult = mysqli_query($conn, $productSql);
+    $productResult = mysqli_query(
+        $conn,
+        $productSql
+    );
 
     if (!$productResult) {
         return [];
     }
 
     while ($row = mysqli_fetch_assoc($productResult)) {
-        $productId = (int)$row["id"];
-
+        $productId = (int) $row["id"];
         $products[$productId] = [
             "id" => $productId,
             "product_name" => $row["product_name"] ?? "",
             "category" => $row["category"] ?? "",
             "description" => $row["description"] ?? "",
-            "price" => (float)($row["price"] ?? 0),
+            "price" => (float) ($row["price"] ?? 0),
             "image" => $row["image"] ?? "",
-            "stock" => (int)($row["stock"] ?? 0),
+            "stock" => (int) ($row["stock"] ?? 0),
             "rating_score" => 0,
             "buying_score" => 0,
             "activity_score" => 0,
@@ -50,14 +53,26 @@ function getRecommendedProducts(
         ];
     }
 
+    mysqli_free_result($productResult);
+
     if (empty($products)) {
         return [];
     }
 
     $normalizeText = function (string $text): array {
+
         $text = strtolower($text);
-        $text = preg_replace('/[^a-z0-9\s]/i', ' ', $text);
-        $words = preg_split('/\s+/', trim($text));
+
+        $text = preg_replace(
+            '/[^a-z0-9\s]/i',
+            ' ',
+            $text
+        );
+
+        $words = preg_split(
+            '/\s+/',
+            trim($text)
+        );
 
         $stopWords = [
             "the",
@@ -87,9 +102,14 @@ function getRecommendedProducts(
         $result = [];
 
         foreach ($words as $word) {
+
             if (
                 strlen($word) >= 2 &&
-                !in_array($word, $stopWords, true)
+                !in_array(
+                    $word,
+                    $stopWords,
+                    true
+                )
             ) {
                 $result[$word] = true;
             }
@@ -98,16 +118,36 @@ function getRecommendedProducts(
         return array_keys($result);
     };
 
-    $calculateSimilarity = function (array $a, array $b): float {
-        if (empty($a) || empty($b)) {
+    $calculateSimilarity = function (
+        array $a,
+        array $b
+    ): float {
+
+        if (
+            empty($a) ||
+            empty($b)
+        ) {
             return 0;
         }
 
         $a = array_unique($a);
         $b = array_unique($b);
 
-        $intersection = count(array_intersect($a, $b));
-        $union = count(array_unique(array_merge($a, $b)));
+        $intersection = count(
+            array_intersect(
+                $a,
+                $b
+            )
+        );
+
+        $union = count(
+            array_unique(
+                array_merge(
+                    $a,
+                    $b
+                )
+            )
+        );
 
         if ($union === 0) {
             return 0;
@@ -125,9 +165,13 @@ function getRecommendedProducts(
         GROUP BY product_id
     ";
 
-    $ratingResult = mysqli_query($conn, $ratingSql);
+    $ratingResult = mysqli_query(
+        $conn,
+        $ratingSql
+    );
 
     $globalRating = 0;
+
     $globalRatingSql = mysqli_query(
         $conn,
         "
@@ -137,8 +181,18 @@ function getRecommendedProducts(
     );
 
     if ($globalRatingSql) {
-        $globalRow = mysqli_fetch_assoc($globalRatingSql);
-        $globalRating = (float)($globalRow["global_rating"] ?? 0);
+
+        $globalRow = mysqli_fetch_assoc(
+            $globalRatingSql
+        );
+
+        $globalRating = (float) (
+            $globalRow["global_rating"] ?? 0
+        );
+
+        mysqli_free_result(
+            $globalRatingSql
+        );
     }
 
     if ($globalRating <= 0) {
@@ -148,36 +202,71 @@ function getRecommendedProducts(
     $minimumReviews = 3;
 
     if ($ratingResult) {
-        while ($row = mysqli_fetch_assoc($ratingResult)) {
 
-            $productId = (int)$row["product_id"];
+        while (
+            $row = mysqli_fetch_assoc(
+                $ratingResult
+            )
+        ) {
+
+            $productId = (int) $row["product_id"];
 
             if (!isset($products[$productId])) {
                 continue;
             }
 
-            $reviewCount = (int)$row["review_count"];
-            $averageRating = (float)$row["average_rating"];
+            $reviewCount = (int) (
+                $row["review_count"] ?? 0
+            );
+
+            $averageRating = (float) (
+                $row["average_rating"] ?? 0
+            );
 
             $bayesianRating =
                 (
-                    ($reviewCount / ($reviewCount + $minimumReviews))
+                    (
+                        $reviewCount /
+                        (
+                            $reviewCount +
+                            $minimumReviews
+                        )
+                    )
                     * $averageRating
                 )
                 +
                 (
-                    ($minimumReviews / ($reviewCount + $minimumReviews))
+                    (
+                        $minimumReviews /
+                        (
+                            $reviewCount +
+                            $minimumReviews
+                        )
+                    )
                     * $globalRating
                 );
 
-            $score = ($bayesianRating - 1) / 4;
+            $score = (
+                $bayesianRating - 1
+            ) / 4;
 
             $products[$productId]["rating_score"] =
-                max(0, min(1, $score));
+                max(
+                    0,
+                    min(
+                        1,
+                        $score
+                    )
+                );
         }
+
+        mysqli_free_result(
+            $ratingResult
+        );
     }
 
     $categoryPurchases = [];
+
     $purchasedProducts = [];
 
     $purchaseSql = "
@@ -194,7 +283,10 @@ function getRecommendedProducts(
           AND o.status <> 'Cancelled'
     ";
 
-    $purchaseStmt = mysqli_prepare($conn, $purchaseSql);
+    $purchaseStmt = mysqli_prepare(
+        $conn,
+        $purchaseSql
+    );
 
     if ($purchaseStmt) {
 
@@ -204,39 +296,84 @@ function getRecommendedProducts(
             $userId
         );
 
-        mysqli_stmt_execute($purchaseStmt);
+        mysqli_stmt_execute(
+            $purchaseStmt
+        );
 
         $purchaseResult =
-            mysqli_stmt_get_result($purchaseStmt);
-
-        while ($row = mysqli_fetch_assoc($purchaseResult)) {
-
-            $productId = (int)$row["product_id"];
-            $category = strtolower(
-                trim($row["category"] ?? "")
+            mysqli_stmt_get_result(
+                $purchaseStmt
             );
 
-            $quantity = max(
-                1,
-                (int)$row["quantity"]
-            );
+        if ($purchaseResult) {
 
-            if ($category !== "") {
-                if (!isset($categoryPurchases[$category])) {
-                    $categoryPurchases[$category] = 0;
+            while (
+                $row = mysqli_fetch_assoc(
+                    $purchaseResult
+                )
+            ) {
+
+                $productId = (int) (
+                    $row["product_id"] ?? 0
+                );
+
+                $category = strtolower(
+                    trim(
+                        $row["category"] ?? ""
+                    )
+                );
+
+                $quantity = max(
+                    1,
+                    (int) (
+                        $row["quantity"] ?? 0
+                    )
+                );
+
+                if ($category !== "") {
+
+                    if (
+                        !isset(
+                            $categoryPurchases[
+                                $category
+                            ]
+                        )
+                    ) {
+                        $categoryPurchases[
+                            $category
+                        ] = 0;
+                    }
+
+                    $categoryPurchases[
+                        $category
+                    ] += $quantity;
                 }
 
-                $categoryPurchases[$category] += $quantity;
+                if (
+                    !isset(
+                        $purchasedProducts[
+                            $productId
+                        ]
+                    )
+                ) {
+                    $purchasedProducts[
+                        $productId
+                    ] = 0;
+                }
+
+                $purchasedProducts[
+                    $productId
+                ] += $quantity;
             }
 
-            if (!isset($purchasedProducts[$productId])) {
-                $purchasedProducts[$productId] = 0;
-            }
-
-            $purchasedProducts[$productId] += $quantity;
+            mysqli_free_result(
+                $purchaseResult
+            );
         }
 
-        mysqli_stmt_close($purchaseStmt);
+        mysqli_stmt_close(
+            $purchaseStmt
+        );
     }
 
     $maxCategoryPurchase =
@@ -244,37 +381,58 @@ function getRecommendedProducts(
             ? max($categoryPurchases)
             : 1;
 
-    foreach ($products as $productId => &$product) {
+    foreach (
+        $products
+        as $productId => &$product
+    ) {
 
         $category = strtolower(
-            trim($product["category"])
+            trim(
+                $product["category"]
+            )
         );
 
         $categoryScore = 0;
 
         if (
             $category !== "" &&
-            isset($categoryPurchases[$category])
+            isset(
+                $categoryPurchases[
+                    $category
+                ]
+            )
         ) {
+
             $categoryScore =
-                $categoryPurchases[$category]
-                / $maxCategoryPurchase;
+                $categoryPurchases[
+                    $category
+                ] / $maxCategoryPurchase;
         }
 
         $sameProductPurchase =
-            isset($purchasedProducts[$productId])
+            isset(
+                $purchasedProducts[
+                    $productId
+                ]
+            )
                 ? min(
                     1,
-                    $purchasedProducts[$productId] / 5
+                    $purchasedProducts[
+                        $productId
+                    ] / 5
                 )
                 : 0;
 
         $product["buying_score"] =
             min(
                 1,
-                ($categoryScore * 0.85)
+                (
+                    $categoryScore * 0.85
+                )
                 +
-                ($sameProductPurchase * 0.15)
+                (
+                    $sameProductPurchase * 0.15
+                )
             );
     }
 
@@ -314,97 +472,156 @@ function getRecommendedProducts(
     ];
 
     if ($activityStmt) {
+
         mysqli_stmt_bind_param(
             $activityStmt,
             "i",
             $userId
         );
 
-        mysqli_stmt_execute($activityStmt);
+        mysqli_stmt_execute(
+            $activityStmt
+        );
 
         $activityResult =
-            mysqli_stmt_get_result($activityStmt);
+            mysqli_stmt_get_result(
+                $activityStmt
+            );
 
-        while ($row = mysqli_fetch_assoc($activityResult)) {
+        if ($activityResult) {
 
-            $productId = (int)$row["product_id"];
+            while (
+                $row = mysqli_fetch_assoc(
+                    $activityResult
+                )
+            ) {
 
-            if (!isset($products[$productId])) {
-                continue;
-            }
+                $productId = (int) (
+                    $row["product_id"] ?? 0
+                );
 
-            $activityType =
-                trim($row["activity_type"] ?? "");
+                if (
+                    !isset(
+                        $products[$productId]
+                    )
+                ) {
+                    continue;
+                }
 
-            $weight =
-                $activityWeights[$activityType] ?? 0;
+                $activityType =
+                    trim(
+                        $row["activity_type"] ?? ""
+                    );
 
-            $createdAt =
-                $row["created_at"] ?? "";
+                $weight =
+                    $activityWeights[
+                        $activityType
+                    ] ?? 0;
 
-            $daysAgo = 999;
+                $createdAt =
+                    $row["created_at"] ?? "";
 
-            if (!empty($createdAt)) {
-                $timestamp = strtotime($createdAt);
+                $daysAgo = 999;
 
-                if ($timestamp !== false) {
-                    $daysAgo =
-                        floor(
+                if (!empty($createdAt)) {
+
+                    $timestamp =
+                        strtotime($createdAt);
+
+                    if (
+                        $timestamp !== false
+                    ) {
+
+                        $daysAgo = floor(
                             (
-                                time() - $timestamp
+                                time() -
+                                $timestamp
                             ) / 86400
                         );
+                    }
                 }
+
+                if ($daysAgo <= 1) {
+                    $decay = 1.00;
+                } elseif ($daysAgo <= 7) {
+                    $decay = 0.80;
+                } elseif ($daysAgo <= 30) {
+                    $decay = 0.50;
+                } elseif ($daysAgo <= 90) {
+                    $decay = 0.20;
+                } else {
+                    $decay = 0.05;
+                }
+
+                if (
+                    !isset(
+                        $activityScores[
+                            $productId
+                        ]
+                    )
+                ) {
+                    $activityScores[
+                        $productId
+                    ] = 0;
+                }
+
+                $activityScores[
+                    $productId
+                ] += $weight * $decay;
             }
 
-            if ($daysAgo <= 1) {
-                $decay = 1.00;
-            } elseif ($daysAgo <= 7) {
-                $decay = 0.80;
-            } elseif ($daysAgo <= 30) {
-                $decay = 0.50;
-            } elseif ($daysAgo <= 90) {
-                $decay = 0.20;
-            } else {
-                $decay = 0.05;
-            }
-
-            if (!isset($activityScores[$productId])) {
-                $activityScores[$productId] = 0;
-            }
-
-            $activityScores[$productId] +=
-                $weight * $decay;
+            mysqli_free_result(
+                $activityResult
+            );
         }
 
-        mysqli_stmt_close($activityStmt);
+        mysqli_stmt_close(
+            $activityStmt
+        );
     }
 
     $maxPositiveActivity = 1;
 
-    foreach ($activityScores as $score) {
-        if ($score > $maxPositiveActivity) {
-            $maxPositiveActivity = $score;
+    foreach (
+        $activityScores as $score
+    ) {
+
+        if (
+            $score >
+            $maxPositiveActivity
+        ) {
+            $maxPositiveActivity =
+                $score;
         }
     }
 
-    foreach ($products as $productId => &$product) {
+    foreach (
+        $products
+        as $productId => &$product
+    ) {
 
         $activity =
-            $activityScores[$productId] ?? 0;
+            $activityScores[
+                $productId
+            ] ?? 0;
 
         if ($activity > 0) {
+
             $product["activity_score"] =
                 min(
                     1,
-                    $activity / $maxPositiveActivity
+                    $activity /
+                    $maxPositiveActivity
                 );
+
         } else {
+
             $product["activity_score"] = 0;
         }
     }
 
     unset($product);
+
     $wishlistSql = "
         SELECT product_id
         FROM wishlist
@@ -419,26 +636,61 @@ function getRecommendedProducts(
     $wishlistProducts = [];
 
     if ($wishlistStmt) {
+
         mysqli_stmt_bind_param(
             $wishlistStmt,
             "i",
             $userId
         );
-        mysqli_stmt_execute($wishlistStmt);
-        $wishlistResult =mysqli_stmt_get_result($wishlistStmt);
 
-        while ($row = mysqli_fetch_assoc($wishlistResult)) {
+        mysqli_stmt_execute(
+            $wishlistStmt
+        );
 
-            $productId =
-                (int)$row["product_id"];
+        $wishlistResult =
+            mysqli_stmt_get_result(
+                $wishlistStmt
+            );
 
-            $wishlistProducts[$productId] = true;
+        if ($wishlistResult) {
+
+            while (
+                $row = mysqli_fetch_assoc(
+                    $wishlistResult
+                )
+            ) {
+
+                $productId = (int) (
+                    $row["product_id"] ?? 0
+                );
+
+                $wishlistProducts[
+                    $productId
+                ] = true;
+            }
+
+            mysqli_free_result(
+                $wishlistResult
+            );
         }
-        mysqli_stmt_close($wishlistStmt);
+
+        mysqli_stmt_close(
+            $wishlistStmt
+        );
     }
 
-    foreach ($products as $productId => &$product) {
-        if (isset($wishlistProducts[$productId])) {
+    foreach (
+        $products
+        as $productId => &$product
+    ) {
+
+        if (
+            isset(
+                $wishlistProducts[
+                    $productId
+                ]
+            )
+        ) {
             $product["wishlist_score"] = 1;
         } else {
             $product["wishlist_score"] = 0;
@@ -446,34 +698,66 @@ function getRecommendedProducts(
     }
 
     unset($product);
+
     $userProfileWords = [];
-    foreach ($products as $productId => $product) {
+
+    foreach (
+        $products
+        as $productId => $product
+    ) {
+
         $hasUserSignal =
-            isset($activityScores[$productId])
+            isset(
+                $activityScores[
+                    $productId
+                ]
+            )
             ||
-            isset($purchasedProducts[$productId])
+            isset(
+                $purchasedProducts[
+                    $productId
+                ]
+            )
             ||
-            isset($wishlistProducts[$productId]);
+            isset(
+                $wishlistProducts[
+                    $productId
+                ]
+            );
 
         if (!$hasUserSignal) {
             continue;
         }
-        $text =$product["product_name"]
+
+        $text =
+            $product["product_name"]
             . " "
             . $product["category"]
             . " "
             . $product["description"];
 
-        $words = $normalizeText($text);
+        $words =
+            $normalizeText($text);
 
         foreach ($words as $word) {
-            $userProfileWords[$word] = true;
+            $userProfileWords[
+                $word
+            ] = true;
         }
     }
 
-    $userProfileWords =array_keys($userProfileWords);
+    $userProfileWords =
+        array_keys(
+            $userProfileWords
+        );
+
     $contentScores = [];
-    foreach ($products as $productId => $product) {
+
+    foreach (
+        $products
+        as $productId => $product
+    ) {
+
         $productText =
             $product["product_name"]
             . " "
@@ -482,13 +766,16 @@ function getRecommendedProducts(
             . $product["description"];
 
         $productWords =
-            $normalizeText($productText);
-
-        $contentScores[$productId] =
-            $calculateSimilarity(
-                $userProfileWords,
-                $productWords
+            $normalizeText(
+                $productText
             );
+
+        $contentScores[
+            $productId
+        ] = $calculateSimilarity(
+            $userProfileWords,
+            $productWords
+        );
     }
 
     $maxContentScore =
@@ -496,18 +783,31 @@ function getRecommendedProducts(
             ? max($contentScores)
             : 0;
 
-    foreach ($products as $productId => &$product) {
+    foreach (
+        $products
+        as $productId => &$product
+    ) {
 
         $score =
-            $contentScores[$productId] ?? 0;
+            $contentScores[
+                $productId
+            ] ?? 0;
 
         if ($maxContentScore > 0) {
+
             $score =
-                $score / $maxContentScore;
+                $score /
+                $maxContentScore;
         }
 
         $product["content_score"] =
-            max(0, min(1, $score));
+            max(
+                0,
+                min(
+                    1,
+                    $score
+                )
+            );
     }
 
     unset($product);
@@ -533,14 +833,26 @@ function getRecommendedProducts(
 
     if ($popularityResult) {
 
-        while ($row = mysqli_fetch_assoc($popularityResult)) {
+        while (
+            $row = mysqli_fetch_assoc(
+                $popularityResult
+            )
+        ) {
 
-            $productId =
-                (int)$row["product_id"];
+            $productId = (int) (
+                $row["product_id"] ?? 0
+            );
 
-            $popularity[$productId] =
-                (int)$row["purchase_count"];
+            $popularity[
+                $productId
+            ] = (int) (
+                $row["purchase_count"] ?? 0
+            );
         }
+
+        mysqli_free_result(
+            $popularityResult
+        );
     }
 
     $maxPopularity =
@@ -548,16 +860,22 @@ function getRecommendedProducts(
             ? max($popularity)
             : 1;
 
-    foreach ($products as $productId => &$product) {
+    foreach (
+        $products
+        as $productId => &$product
+    ) {
 
         $purchaseCount =
-            $popularity[$productId] ?? 0;
+            $popularity[
+                $productId
+            ] ?? 0;
 
         $product["popularity_score"] =
             $maxPopularity > 0
                 ? min(
                     1,
-                    $purchaseCount / $maxPopularity
+                    $purchaseCount /
+                    $maxPopularity
                 )
                 : 0;
     }
@@ -567,10 +885,15 @@ function getRecommendedProducts(
     $searchWords =
         $normalizeText($search);
 
-    foreach ($products as $productId => &$product) {
+    foreach (
+        $products
+        as $productId => &$product
+    ) {
 
         if (empty($searchWords)) {
+
             $product["search_score"] = 0;
+
             continue;
         }
 
@@ -589,29 +912,26 @@ function getRecommendedProducts(
                 $product["description"]
             );
 
-        $nameMatches =
-            count(
-                array_intersect(
-                    $searchWords,
-                    $nameWords
-                )
-            );
+        $nameMatches = count(
+            array_intersect(
+                $searchWords,
+                $nameWords
+            )
+        );
 
-        $categoryMatches =
-            count(
-                array_intersect(
-                    $searchWords,
-                    $categoryWords
-                )
-            );
+        $categoryMatches = count(
+            array_intersect(
+                $searchWords,
+                $categoryWords
+            )
+        );
 
-        $descriptionMatches =
-            count(
-                array_intersect(
-                    $searchWords,
-                    $descriptionWords
-                )
-            );
+        $descriptionMatches = count(
+            array_intersect(
+                $searchWords,
+                $descriptionWords
+            )
+        );
 
         $searchCount =
             count($searchWords);
@@ -619,13 +939,16 @@ function getRecommendedProducts(
         if ($searchCount > 0) {
 
             $nameScore =
-                $nameMatches / $searchCount;
+                $nameMatches /
+                $searchCount;
 
             $categoryScore =
-                $categoryMatches / $searchCount;
+                $categoryMatches /
+                $searchCount;
 
             $descriptionScore =
-                $descriptionMatches / $searchCount;
+                $descriptionMatches /
+                $searchCount;
 
             $searchScore =
                 ($nameScore * 0.60)
@@ -644,7 +967,9 @@ function getRecommendedProducts(
                 );
 
             $searchLower =
-                strtolower(trim($search));
+                strtolower(
+                    trim($search)
+                );
 
             if (
                 $searchLower !== "" &&
@@ -653,6 +978,7 @@ function getRecommendedProducts(
                     $searchLower
                 ) !== false
             ) {
+
                 $searchScore =
                     min(
                         1,
@@ -663,17 +989,24 @@ function getRecommendedProducts(
             $product["search_score"] =
                 max(
                     0,
-                    min(1, $searchScore)
+                    min(
+                        1,
+                        $searchScore
+                    )
                 );
 
         } else {
+
             $product["search_score"] = 0;
         }
     }
 
     unset($product);
 
-    foreach ($products as $productId => &$product) {
+    foreach (
+        $products
+        as $productId => &$product
+    ) {
 
         $product["final_score"] =
             ($product["rating_score"] * 0.25)
@@ -693,9 +1026,23 @@ function getRecommendedProducts(
 
     unset($product);
 
-    foreach ($products as $productId => $product) {
-        if (isset($purchasedProducts[$productId])) {
-            unset($products[$productId]);
+    foreach (
+        $products
+        as $productId => $product
+    ) {
+
+        if (
+            isset(
+                $purchasedProducts[
+                    $productId
+                ]
+            )
+        ) {
+            unset(
+                $products[
+                    $productId
+                ]
+            );
         }
     }
 
@@ -705,12 +1052,16 @@ function getRecommendedProducts(
 
     usort(
         $products,
-        function ($a, $b) {
+        function (
+            $a,
+            $b
+        ) {
+
             if (
-                $a["final_score"]
-                !==
+                $a["final_score"] !==
                 $b["final_score"]
             ) {
+
                 return
                     $b["final_score"]
                     <=>
@@ -718,10 +1069,10 @@ function getRecommendedProducts(
             }
 
             if (
-                $a["content_score"]
-                !==
+                $a["content_score"] !==
                 $b["content_score"]
             ) {
+
                 return
                     $b["content_score"]
                     <=>
@@ -729,10 +1080,10 @@ function getRecommendedProducts(
             }
 
             if (
-                $a["search_score"]
-                !==
+                $a["search_score"] !==
                 $b["search_score"]
             ) {
+
                 return
                     $b["search_score"]
                     <=>
@@ -740,10 +1091,10 @@ function getRecommendedProducts(
             }
 
             if (
-                $a["popularity_score"]
-                !==
+                $a["popularity_score"] !==
                 $b["popularity_score"]
             ) {
+
                 return
                     $b["popularity_score"]
                     <=>
@@ -751,10 +1102,10 @@ function getRecommendedProducts(
             }
 
             if (
-                $a["activity_score"]
-                !==
+                $a["activity_score"] !==
                 $b["activity_score"]
             ) {
+
                 return
                     $b["activity_score"]
                     <=>
@@ -762,10 +1113,10 @@ function getRecommendedProducts(
             }
 
             if (
-                $a["rating_score"]
-                !==
+                $a["rating_score"] !==
                 $b["rating_score"]
             ) {
+
                 return
                     $b["rating_score"]
                     <=>
@@ -807,7 +1158,10 @@ function getRecommendedProducts(
 
         $eligible = [];
 
-        foreach ($products as $index => $product) {
+        foreach (
+            $products
+            as $index => $product
+        ) {
 
             if (
                 abs(
@@ -816,8 +1170,11 @@ function getRecommendedProducts(
                     $bestScore
                 ) <= 0.10
             ) {
+
                 $eligible[] = $index;
+
             } else {
+
                 break;
             }
         }
@@ -835,7 +1192,9 @@ function getRecommendedProducts(
             ];
 
         $finalProducts[] =
-            $products[$selectedIndex];
+            $products[
+                $selectedIndex
+            ];
 
         array_splice(
             $products,
@@ -846,3 +1205,4 @@ function getRecommendedProducts(
 
     return $finalProducts;
 }
+?>

@@ -46,10 +46,6 @@ if (mb_strlen($comment) > 2000) {
     exit();
 }
 
-/*
- * Only additional comments can be edited.
- * The original review has parent_review_id = NULL.
- */
 $stmt = mysqli_prepare(
     $conn,
     "UPDATE product_reviews
@@ -103,3 +99,4 @@ echo json_encode([
     "message" => "Comment updated successfully.",
     "comment" => $comment
 ]);
+?>

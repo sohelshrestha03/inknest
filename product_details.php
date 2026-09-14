@@ -530,7 +530,6 @@ if ($wishlistStmt) {
         </div>
 
         <div class="wishlist-action">
-
             <button
                 type="button"
                 id="wishlistBtn"
@@ -541,7 +540,6 @@ if ($wishlistStmt) {
                     ? "♥ Wishlisted"
                     : "♡ Wishlist" ?>
             </button>
-
             <div
                 id="wishlistMessage"
                 class="wishlist-message"
@@ -550,22 +548,17 @@ if ($wishlistStmt) {
         </div>
 
         <?php if ((int)$product["stock"] > 0): ?>
-
             <div class="quantity-section">
-
                 <label for="quantity">
                     Quantity
                 </label>
-
                 <div class="quantity-control">
-
                     <button
                         type="button"
                         id="decreaseQty"
                     >
                         −
                     </button>
-
                     <input
                         type="number"
                         id="quantity"
@@ -573,20 +566,16 @@ if ($wishlistStmt) {
                         min="1"
                         max="<?= (int)$product["stock"] ?>"
                     >
-
                     <button
                         type="button"
                         id="increaseQty"
                     >
                         +
                     </button>
-
                 </div>
-
             </div>
 
             <div class="cart-action">
-
                 <button
                     type="button"
                     id="addToCartBtn"
@@ -595,18 +584,13 @@ if ($wishlistStmt) {
                 >
                     Add to Cart
                 </button>
-
                 <div
                     id="cartMessage"
                     class="cart-message"
                 ></div>
-
             </div>
-
         <?php else: ?>
-
             <div class="cart-action">
-
                 <button
                     type="button"
                     class="add-to-cart-btn disabled"
@@ -614,54 +598,39 @@ if ($wishlistStmt) {
                 >
                     Out of Stock
                 </button>
-
             </div>
-
         <?php endif; ?>
-
     </div>
-
 </section>
 
 <section class="review-section">
-
     <div class="section-title">
-
         <h2>
             Your Review
         </h2>
-
         <p>
             Share your experience with this product.
         </p>
-
     </div>
 
     <?php if ($userReview === null): ?>
-
         <form
             action="submit_review.php"
             method="POST"
             class="review-form"
             id="reviewForm"
         >
-
             <input
                 type="hidden"
                 name="product_id"
                 value="<?= $productId ?>"
             >
-
             <div class="form-group">
-
                 <label>
                     Rating
                 </label>
-
                 <div class="rating-input">
-
                     <?php for ($i = 5; $i >= 1; $i--): ?>
-
                         <input
                             type="radio"
                             name="rating"
@@ -669,26 +638,20 @@ if ($wishlistStmt) {
                             id="star<?= $i ?>"
                             required
                         >
-
                         <label
                             for="star<?= $i ?>"
                             title="<?= $i ?> star<?= $i > 1 ? "s" : "" ?>"
                         >
                             ★
                         </label>
-
                     <?php endfor; ?>
-
                 </div>
-
             </div>
 
             <div class="form-group">
-
                 <label for="comment">
                     Comment
                 </label>
-
                 <textarea
                     name="comment"
                     id="comment"
@@ -697,94 +660,66 @@ if ($wishlistStmt) {
                     placeholder="Write your review..."
                     required
                 ></textarea>
-
             </div>
-
             <button
                 type="submit"
                 class="submit-review-btn"
             >
                 Submit Review
             </button>
-
         </form>
-
     <?php else: ?>
-
         <div class="your-review-card">
-
             <div class="your-review-header">
-
                 <div class="review-user">
-
                     <?php if (!empty($profilePicture)): ?>
-
                         <img
                             src="<?= e($profilePicture) ?>"
                             alt="Profile"
                             class="review-avatar"
                         >
-
                     <?php else: ?>
-
                         <div class="review-avatar review-avatar-initial">
                             <?= e($profileInitial) ?>
                         </div>
-
                     <?php endif; ?>
 
                     <div>
-
                         <strong>
                             <?= e($username) ?>
                         </strong>
-
                         <div class="review-date">
-
                             <?= date(
                                 "M d, Y",
                                 strtotime(
                                     $userReview["created_at"]
                                 )
                             ) ?>
-
                         </div>
-
                     </div>
-
                 </div>
-
                 <div class="review-stars">
-
                     <?php
                     $userRating =
                         (int)$userReview["rating"];
                     ?>
-
                     <?php for ($i = 1; $i <= 5; $i++): ?>
-
                         <span
                             class="<?= $i <= $userRating ? "filled" : "" ?>"
                         >
                             ★
                         </span>
-
                     <?php endfor; ?>
-
                 </div>
-
             </div>
 
             <div class="your-review-text">
-
                 <?= nl2br(
                     e(
                         $userReview["comment"]
                     )
                 ) ?>
-
             </div>
-
         </div>
 
         <form
@@ -792,25 +727,20 @@ if ($wishlistStmt) {
             class="followup-form"
             method="POST"
         >
-
             <input
                 type="hidden"
                 name="product_id"
                 value="<?= $productId ?>"
             >
-
             <input
                 type="hidden"
                 name="review_id"
                 value="<?= (int)$userReview["id"] ?>"
             >
-
             <div class="form-group">
-
                 <label for="followUpComment">
                     Add Another Comment
                 </label>
-
                 <textarea
                     name="comment"
                     id="followUpComment"
@@ -819,9 +749,7 @@ if ($wishlistStmt) {
                     placeholder="Add more to your review..."
                     required
                 ></textarea>
-
             </div>
-
             <button
                 type="submit"
                 class="comment-btn"
@@ -829,56 +757,36 @@ if ($wishlistStmt) {
             >
                 Add Comment
             </button>
-
             <div
                 id="followUpMessage"
                 class="follow-up-message"
             ></div>
-
         </form>
-
     <?php endif; ?>
-
 </section>
 
 <section class="feedback-section">
-
     <div class="section-title">
-
         <h2>
             Customer Feedback
         </h2>
-
         <p>
             See what customers are saying about this product.
         </p>
-
     </div>
-
     <?php if (empty($reviews)): ?>
-
         <div class="no-reviews">
-
             No reviews yet.
             Be the first to review this product.
-
         </div>
-
     <?php else: ?>
-
         <div class="reviews-list">
-
             <?php foreach ($reviews as $review): ?>
-
                 <?php
-
-                $reviewId =
-                    (int)$review["id"];
-
+                $reviewId =(int)$review["id"];
                 $reviewUsername =
                     $review["user_name"] ??
                     "User";
-
                 $reviewInitial =
                     strtoupper(
                         substr(
@@ -891,18 +799,10 @@ if ($wishlistStmt) {
                 if ($reviewInitial === "") {
                     $reviewInitial = "U";
                 }
-
-                $reviewRating =
-                    (int)$review["rating"];
-
+                $reviewRating =(int)$review["rating"];
                 $reviewProfilePicture = "";
 
-                if (
-                    !empty(
-                        $review["profile_picture"]
-                    )
-                ) {
-
+                if (!empty($review["profile_picture"])) {
                     $reviewProfileFile =
                         basename(
                             str_replace(
@@ -911,85 +811,53 @@ if ($wishlistStmt) {
                                 $review["profile_picture"]
                             )
                         );
-
-                    $reviewProfilePicture =
-                        "images/profile/" .
-                        $reviewProfileFile;
+                    $reviewProfilePicture ="images/profile/" .$reviewProfileFile;
                 }
-
                 ?>
-
                 <article class="review-card">
-
                     <div class="review-header">
-
                         <div class="review-user">
-
                             <?php if (!empty($reviewProfilePicture)): ?>
-
-                                <img
-                                    src="<?= e($reviewProfilePicture) ?>"
-                                    alt="<?= e($reviewUsername) ?>"
-                                    class="review-avatar"
-                                >
-
+                                <img src="<?= e($reviewProfilePicture) ?>" alt="<?= e($reviewUsername) ?>" class="review-avatar">
                             <?php else: ?>
-
                                 <div class="review-avatar review-avatar-initial">
-
                                     <?= e($reviewInitial) ?>
-
                                 </div>
-
                             <?php endif; ?>
 
                             <div class="review-user-details">
-
                                 <strong>
                                     <?= e($reviewUsername) ?>
                                 </strong>
-
                                 <span class="review-date">
-
                                     <?= date(
                                         "M d, Y",
                                         strtotime(
                                             $review["created_at"]
                                         )
                                     ) ?>
-
                                 </span>
-
                             </div>
-
                         </div>
 
                         <div class="review-stars">
-
                             <?php for ($i = 1; $i <= 5; $i++): ?>
-
                                 <span
                                     class="<?= $i <= $reviewRating ? "filled" : "" ?>"
                                 >
                                     ★
                                 </span>
-
                             <?php endfor; ?>
-
                         </div>
-
                     </div>
 
                     <div class="review-comment">
-
                         <?= nl2br(
                             e(
                                 $review["comment"]
                             )
                         ) ?>
-
                     </div>
-
                     <?php if (
                         isset(
                             $followUpComments[$reviewId]
@@ -1000,22 +868,17 @@ if ($wishlistStmt) {
                     ): ?>
 
                         <div class="review-replies">
-
                             <div class="review-replies-title">
                                 Additional comments
                             </div>
-
                             <?php foreach (
                                 $followUpComments[$reviewId]
                                 as $followUp
                             ): ?>
-
                                 <?php
-
                                 $commentUsername =
                                     $followUp["user_name"] ??
                                     "User";
-
                                 $commentInitial =
                                     strtoupper(
                                         substr(
@@ -1026,13 +889,10 @@ if ($wishlistStmt) {
                                             1
                                         )
                                     );
-
                                 if ($commentInitial === "") {
                                     $commentInitial = "U";
                                 }
-
                                 $commentProfilePicture = "";
-
                                 if (
                                     !empty(
                                         $followUp[
@@ -1056,35 +916,25 @@ if ($wishlistStmt) {
                                         "images/profile/" .
                                         $commentProfileFile;
                                 }
-
                                 ?>
 
                                 <div class="review-reply">
-
                                     <div class="review-reply-header">
-
                                         <?php if (!empty($commentProfilePicture)): ?>
-
                                             <img
                                                 src="<?= e($commentProfilePicture) ?>"
                                                 alt="<?= e($commentUsername) ?>"
                                                 class="review-avatar small"
                                             >
-
                                         <?php else: ?>
-
                                             <div class="review-avatar small review-avatar-initial">
-
                                                 <?= e(
                                                     $commentInitial
                                                 ) ?>
-
                                             </div>
-
                                         <?php endif; ?>
 
                                         <div class="review-reply-user">
-
                                             <strong>
                                                 <?= e(
                                                     $commentUsername
@@ -1092,7 +942,6 @@ if ($wishlistStmt) {
                                             </strong>
 
                                             <span>
-
                                                 <?= date(
                                                     "M d, Y",
                                                     strtotime(
@@ -1103,9 +952,7 @@ if ($wishlistStmt) {
                                                 ) ?>
 
                                             </span>
-
                                         </div>
-
                                     </div>
 
                                     <div
@@ -1120,9 +967,7 @@ if ($wishlistStmt) {
                                     </div>
 
                                     <?php if ((int)$followUp["user_id"] === $userId): ?>
-
                                         <div class="comment-actions">
-
                                             <button
                                                 type="button"
                                                 class="edit-comment-btn"
@@ -1138,61 +983,39 @@ if ($wishlistStmt) {
                                             >
                                                 Delete
                                             </button>
-
                                         </div>
-
                                     <?php endif; ?>
-
                                 </div>
-
                             <?php endforeach; ?>
-
                         </div>
-
                     <?php endif; ?>
-
                 </article>
-
             <?php endforeach; ?>
-
         </div>
-
     <?php endif; ?>
-
 </section>
 
 </main>
-
 <footer class="footer">
-
-
 <div class="footer-content">
-
     <div class="footer-brand">
-
         <h2>
             Inknest
         </h2>
-
         <p>
             Your trusted online shopping destination.
         </p>
-
     </div>
 
     <div class="footer-links">
-
         <div class="footer-contact">
-
             <h3>
                 Contact Us
             </h3>
-
             <p>
                 <strong>Phone:</strong>
                 +977-9800000000
             </p>
-
             <p>
                 <strong>Email:</strong>
                 support@inknest.com
@@ -1202,15 +1025,11 @@ if ($wishlistStmt) {
                 <strong>Address:</strong>
                 Kathmandu, Nepal
             </p>
-
         </div>
-
     </div>
-
 </div>
 
 <div class="footer-bottom">
-
     <p>
         &copy;
         <?php echo date("Y"); ?>
@@ -1219,13 +1038,8 @@ if ($wishlistStmt) {
     </p>
 
 </div>
-
 </footer>
-
 <script src="js/product_details.js?v=<?php echo time(); ?>"></script>
 <script src="js/comment_edit_delete.js?v=<?php echo time(); ?>"></script>
-
-
 </body>
-
 </html>
