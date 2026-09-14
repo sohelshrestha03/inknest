@@ -2,66 +2,54 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const decreaseQty = document.getElementById("decreaseQty");
     const increaseQty = document.getElementById("increaseQty");
-    const quantity = document.getElementById("quantity");
-
+    const quantityInput = document.getElementById("quantity");
     const addToCartBtn = document.getElementById("addToCartBtn");
     const cartMessage = document.getElementById("cartMessage");
 
-    const wishlistBtn = document.getElementById("wishlistBtn");
-    const wishlistMessage = document.getElementById("wishlistMessage");
+    if (quantityInput) {
 
-    const reviewForm = document.getElementById("reviewForm");
+        const maxQuantity = parseInt(
+            quantityInput.getAttribute("max") || "1",
+            10
+        );
 
-    const followUpForm = document.getElementById("followUpForm");
-    const followUpMessage = document.getElementById("followUpMessage");
-    const followUpSubmit = document.getElementById("followUpSubmit");
+        if (decreaseQty) {
+            decreaseQty.addEventListener("click", function () {
 
-    if (quantity) {
+                let quantity = parseInt(quantityInput.value, 10) || 1;
 
-        quantity.addEventListener("input", function () {
+                if (quantity > 1) {
+                    quantity--;
+                    quantityInput.value = quantity;
+                }
+            });
+        }
 
-            let value = parseInt(this.value, 10);
+        if (increaseQty) {
+            increaseQty.addEventListener("click", function () {
 
-            const min = parseInt(this.min || "1", 10);
-            const max = parseInt(this.max || "999999", 10);
+                let quantity = parseInt(quantityInput.value, 10) || 1;
 
-            if (isNaN(value)) {
-                value = min;
+                if (quantity < maxQuantity) {
+                    quantity++;
+                    quantityInput.value = quantity;
+                }
+            });
+        }
+
+        quantityInput.addEventListener("input", function () {
+
+            let quantity = parseInt(quantityInput.value, 10) || 1;
+
+            if (quantity < 1) {
+                quantity = 1;
             }
 
-            value = Math.max(min, Math.min(value, max));
-
-            this.value = value;
-        });
-    }
-
-    if (decreaseQty) {
-
-        decreaseQty.addEventListener("click", function () {
-
-            if (!quantity) {
-                return;
+            if (quantity > maxQuantity) {
+                quantity = maxQuantity;
             }
 
-            let value = parseInt(quantity.value, 10) || 1;
-            const min = parseInt(quantity.min || "1", 10);
-
-            quantity.value = Math.max(min, value - 1);
-        });
-    }
-
-    if (increaseQty) {
-
-        increaseQty.addEventListener("click", function () {
-
-            if (!quantity) {
-                return;
-            }
-
-            let value = parseInt(quantity.value, 10) || 1;
-            const max = parseInt(quantity.max || "999999", 10);
-
-            quantity.value = Math.min(max, value + 1);
+            quantityInput.value = quantity;
         });
     }
 
@@ -69,134 +57,69 @@ document.addEventListener("DOMContentLoaded", function () {
 
         addToCartBtn.addEventListener("click", async function () {
 
-            const productId = this.dataset.productId;
+            const productId = parseInt(
+                addToCartBtn.dataset.productId,
+                10
+            );
 
-            const quantityValue = quantity
-                ? parseInt(quantity.value, 10) || 1
+            let quantity = quantityInput
+                ? parseInt(quantityInput.value, 10)
                 : 1;
 
-            if (!productId) {
+            if (!productId || productId <= 0) {
+                showCartMessage(
+                    "Invalid product.",
+                    false
+                );
                 return;
             }
 
-            this.disabled = true;
-
-            if (cartMessage) {
-                cartMessage.textContent = "Adding to cart...";
+            if (!quantity || quantity < 1) {
+                quantity = 1;
             }
 
-            const formData = new FormData();
+            const originalText = addToCartBtn.textContent;
 
-            formData.append("product_id", productId);
-            formData.append("quantity", quantityValue);
+            addToCartBtn.disabled = true;
+            addToCartBtn.textContent = "Adding...";
 
             try {
 
-                const response = await fetch("cart.php", {
-                    method: "POST",
-                    body: formData
-                });
+                const formData = new FormData();
 
-                const text = await response.text();
-
-                let data;
-
-                try {
-                    data = JSON.parse(text);
-                } catch (error) {
-
-                    console.error("Cart response:", text);
-
-                    throw new Error("Invalid server response.");
-                }
-
-                if (!data.success) {
-
-                    throw new Error(
-                        data.message ||
-                        "Unable to add product to cart."
-                    );
-                }
-
-                if (cartMessage) {
-
-                    cartMessage.textContent =
-                        data.message ||
-                        "Product added to cart.";
-                }
-
-                const cartCount =
-                    document.getElementById("cartCount");
-
-                if (
-                    cartCount &&
-                    data.cartCount !== undefined
-                ) {
-
-                    cartCount.textContent =
-                        data.cartCount;
-                }
-
-            } catch (error) {
-
-                console.error(
-                    "Add to cart error:",
-                    error
+                formData.append(
+                    "product_id",
+                    productId
                 );
 
-                if (cartMessage) {
+                formData.append(
+                    "quantity",
+                    quantity
+                );
 
-                    cartMessage.textContent =
-                        error.message ||
-                        "Unable to add product to cart.";
-                }
+                const response = await fetch(
+                    "add_to_cart.php",
+                    {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "Accept": "application/json",
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        cache: "no-store"
+                    }
+                );
 
-            } finally {
-
-                this.disabled = false;
-            }
-        });
-    }
-
-    if (wishlistBtn) {
-
-        wishlistBtn.addEventListener("click", async function () {
-
-            const productId = this.dataset.productId;
-
-            if (!productId || this.disabled) {
-                return;
-            }
-
-            this.disabled = true;
-
-            if (wishlistMessage) {
-                wishlistMessage.textContent =
-                    "Updating wishlist...";
-            }
-
-            const formData = new FormData();
-
-            formData.append("product_id", productId);
-
-            try {
-
-                const response = await fetch("wishlist.php", {
-                    method: "POST",
-                    body: formData
-                });
-
-                const text = await response.text();
+                const responseText = await response.text();
 
                 let data;
 
                 try {
-                    data = JSON.parse(text);
+                    data = JSON.parse(responseText);
                 } catch (error) {
-
                     console.error(
-                        "Wishlist response:",
-                        text
+                        "Invalid JSON response:",
+                        responseText
                     );
 
                     throw new Error(
@@ -206,21 +129,177 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (!data.success) {
 
-                    throw new Error(
-                        data.message ||
-                        "Unable to update wishlist."
+                    showCartMessage(
+                        data.message || "Unable to add product to cart.",
+                        false
                     );
+
+                    return;
                 }
 
-                this.textContent =
-                    data.wishlisted
-                        ? "♥ Wishlisted"
-                        : "♡ Wishlist";
+                let cart = [];
 
-                if (wishlistMessage) {
+                try {
+                    cart = JSON.parse(
+                        localStorage.getItem("inknestCart")
+                    ) || [];
+                } catch (error) {
+                    cart = [];
+                }
 
-                    wishlistMessage.textContent =
-                        data.message || "";
+                for (let i = 0; i < quantity; i++) {
+                    cart.push(productId);
+                }
+
+                localStorage.setItem(
+                    "inknestCart",
+                    JSON.stringify(cart)
+                );
+
+                updateCartCount();
+
+                showCartMessage(
+                    data.message || "Product added to cart.",
+                    true
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Add to cart error:",
+                    error
+                );
+
+                showCartMessage(
+                    error.message || "Unable to process cart request.",
+                    false
+                );
+
+            } finally {
+
+                addToCartBtn.disabled = false;
+                addToCartBtn.textContent = originalText;
+            }
+        });
+    }
+
+    function updateCartCount() {
+
+        const cartCount =
+            document.getElementById("cartCount");
+
+        if (!cartCount) {
+            return;
+        }
+
+        let cart = [];
+
+        try {
+            cart = JSON.parse(
+                localStorage.getItem("inknestCart")
+            ) || [];
+        } catch (error) {
+            cart = [];
+        }
+
+        cartCount.textContent = cart.length;
+    }
+
+    function showCartMessage(message, success) {
+
+        if (!cartMessage) {
+            return;
+        }
+
+        cartMessage.textContent = message;
+
+        cartMessage.classList.remove(
+            "success",
+            "error"
+        );
+
+        cartMessage.classList.add(
+            success ? "success" : "error"
+        );
+
+        setTimeout(function () {
+
+            if (cartMessage) {
+                cartMessage.textContent = "";
+                cartMessage.classList.remove(
+                    "success",
+                    "error"
+                );
+            }
+
+        }, 3000);
+    }
+
+    updateCartCount();
+
+    const wishlistButtons =
+        document.querySelectorAll(".wishlist-btn");
+
+    wishlistButtons.forEach(function (button) {
+
+        button.addEventListener("click", async function () {
+
+            const productId = button.dataset.productId;
+
+            if (!productId) {
+                return;
+            }
+
+            const formData = new FormData();
+
+            formData.append(
+                "product_id",
+                productId
+            );
+
+            try {
+
+                const response = await fetch(
+                    "wishlist.php",
+                    {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "Accept": "application/json",
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    }
+                );
+
+                const text =
+                    await response.text();
+
+                let data;
+
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    console.error(
+                        "Wishlist response:",
+                        text
+                    );
+                    return;
+                }
+
+                if (data.success) {
+
+                    button.classList.toggle(
+                        "active"
+                    );
+
+                    if (data.message) {
+                        alert(data.message);
+                    }
+                } else {
+
+                    if (data.message) {
+                        alert(data.message);
+                    }
                 }
 
             } catch (error) {
@@ -230,223 +309,176 @@ document.addEventListener("DOMContentLoaded", function () {
                     error
                 );
 
-                if (wishlistMessage) {
-
-                    wishlistMessage.textContent =
-                        error.message ||
-                        "Unable to update wishlist.";
-                }
-
-            } finally {
-
-                this.disabled = false;
+                alert(
+                    "Unable to process wishlist request."
+                );
             }
         });
-    }
+    });
+
+    const reviewForm =
+        document.getElementById("reviewForm");
 
     if (reviewForm) {
 
-        reviewForm.addEventListener("submit", async function (event) {
+        reviewForm.addEventListener(
+            "submit",
+            async function (event) {
 
-            event.preventDefault();
+                event.preventDefault();
 
-            const submitButton =
-                reviewForm.querySelector(
-                    'button[type="submit"]'
-                );
-
-            if (submitButton) {
-
-                submitButton.disabled = true;
-                submitButton.textContent = "Submitting...";
-            }
-
-            const formData = new FormData(reviewForm);
-
-            try {
-
-                const response = await fetch(
-                    "submit_review.php",
-                    {
-                        method: "POST",
-                        body: formData
-                    }
-                );
-
-                const text = await response.text();
-
-                let data;
+                const formData =
+                    new FormData(reviewForm);
 
                 try {
-                    data = JSON.parse(text);
+
+                    const response = await fetch(
+                        "submit_review.php",
+                        {
+                            method: "POST",
+                            body: formData,
+                            headers: {
+                                "Accept": "application/json",
+                                "X-Requested-With": "XMLHttpRequest"
+                            }
+                        }
+                    );
+
+                    const text =
+                        await response.text();
+
+                    let data;
+
+                    try {
+                        data = JSON.parse(text);
+                    } catch (error) {
+                        console.error(
+                            "Review response:",
+                            text
+                        );
+
+                        alert(
+                            "Invalid server response."
+                        );
+
+                        return;
+                    }
+
+                    if (data.success) {
+
+                        alert(
+                            data.message ||
+                            "Review submitted successfully."
+                        );
+
+                        reviewForm.reset();
+
+                        window.location.reload();
+
+                    } else {
+
+                        alert(
+                            data.message ||
+                            "Unable to submit review."
+                        );
+                    }
+
                 } catch (error) {
 
                     console.error(
-                        "Review response:",
-                        text
+                        "Review error:",
+                        error
                     );
 
-                    throw new Error(
-                        "Invalid server response."
-                    );
-                }
-
-                if (!data.success) {
-
-                    throw new Error(
-                        data.message ||
+                    alert(
                         "Unable to submit review."
                     );
                 }
-
-                if (submitButton) {
-
-                    submitButton.textContent =
-                        data.message ||
-                        "Review submitted successfully.";
-                }
-
-                setTimeout(function () {
-                    window.location.reload();
-                }, 700);
-
-            } catch (error) {
-
-                console.error(
-                    "Review error:",
-                    error
-                );
-
-                if (submitButton) {
-
-                    submitButton.disabled = false;
-                    submitButton.textContent =
-                        "Submit Review";
-                }
-
-                alert(
-                    error.message ||
-                    "Unable to submit review."
-                );
             }
-        });
+        );
     }
 
-    if (followUpForm) {
+    const followupForms =
+        document.querySelectorAll(".followup-form");
 
-        followUpForm.addEventListener("submit", async function (event) {
+    followupForms.forEach(function (form) {
 
-            event.preventDefault();
+        form.addEventListener(
+            "submit",
+            async function (event) {
 
-            if (followUpSubmit) {
-                followUpSubmit.disabled = true;
-            }
+                event.preventDefault();
 
-            if (followUpMessage) {
-                followUpMessage.textContent =
-                    "Adding comment...";
-            }
-
-            const formData =
-                new FormData(followUpForm);
-
-            try {
-
-                const response = await fetch(
-                    "submit_followup_comment.php",
-                    {
-                        method: "POST",
-                        body: formData,
-                        headers: {
-                            "X-Requested-With": "XMLHttpRequest",
-                            "Accept": "application/json"
-                        }
-                    }
-                );
-
-                const text = await response.text();
-
-                console.log(
-                    "Follow-up HTTP status:",
-                    response.status
-                );
-
-                console.log(
-                    "Follow-up response:",
-                    text
-                );
-
-                let data;
+                const formData =
+                    new FormData(form);
 
                 try {
-                    data = JSON.parse(text);
-                } catch (error) {
 
-                    if (followUpMessage) {
-
-                        followUpMessage.textContent =
-                            text.trim() ||
-                            "Invalid server response.";
-                    }
-
-                    return;
-                }
-
-                if (!data.success) {
-
-                    if (followUpMessage) {
-
-                        followUpMessage.textContent =
-                            data.message ||
-                            "Unable to add comment.";
-                    }
-
-                    return;
-                }
-
-                if (followUpMessage) {
-
-                    followUpMessage.textContent =
-                        data.message ||
-                        "Comment added successfully.";
-                }
-
-                const textarea =
-                    document.getElementById(
-                        "followUpComment"
+                    const response = await fetch(
+                        "submit_followup_comment.php",
+                        {
+                            method: "POST",
+                            body: formData,
+                            headers: {
+                                "Accept": "application/json",
+                                "X-Requested-With": "XMLHttpRequest"
+                            }
+                        }
                     );
 
-                if (textarea) {
-                    textarea.value = "";
-                }
+                    const text =
+                        await response.text();
 
-                setTimeout(function () {
+                    let data;
 
-                    window.location.reload();
+                    try {
+                        data = JSON.parse(text);
+                    } catch (error) {
 
-                }, 700);
+                        console.error(
+                            "Follow-up response:",
+                            text
+                        );
 
-            } catch (error) {
+                        alert(
+                            "Invalid server response."
+                        );
 
-                console.error(
-                    "Follow-up comment error:",
-                    error
-                );
+                        return;
+                    }
 
-                if (followUpMessage) {
+                    if (data.success) {
 
-                    followUpMessage.textContent =
-                        error.message ||
-                        "Unable to add comment.";
-                }
+                        alert(
+                            data.message ||
+                            "Comment submitted successfully."
+                        );
 
-            } finally {
+                        form.reset();
 
-                if (followUpSubmit) {
-                    followUpSubmit.disabled = false;
+                        window.location.reload();
+
+                    } else {
+
+                        alert(
+                            data.message ||
+                            "Unable to submit comment."
+                        );
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Follow-up error:",
+                        error
+                    );
+
+                    alert(
+                        "Unable to submit comment."
+                    );
                 }
             }
-        });
-    }
+        );
+    });
 
 });

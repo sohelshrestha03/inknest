@@ -1,7 +1,5 @@
 <?php
-
 session_start();
-
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -37,27 +35,22 @@ $profileStmt = mysqli_prepare(
 );
 
 if ($profileStmt) {
-
     mysqli_stmt_bind_param(
         $profileStmt,
         "i",
         $userId
     );
-
     mysqli_stmt_execute($profileStmt);
-
     mysqli_stmt_bind_result(
         $profileStmt,
         $storedProfilePicture
     );
 
     if (mysqli_stmt_fetch($profileStmt)) {
-
-        $storedProfilePicture =
-            trim($storedProfilePicture ?? "");
-
+        $storedProfilePicture = trim(
+            $storedProfilePicture ?? ""
+        );
         if ($storedProfilePicture !== "") {
-
             $fileName = basename(
                 str_replace(
                     "\\",
@@ -65,12 +58,10 @@ if ($profileStmt) {
                     $storedProfilePicture
                 )
             );
-
             $profilePicture =
                 "images/profile/" . $fileName;
         }
     }
-
     mysqli_stmt_close($profileStmt);
 }
 
@@ -80,10 +71,7 @@ if (isset($_GET["id"])) {
     $productId = (int)$_GET["id"];
 }
 
-if (
-    $productId <= 0 &&
-    isset($_POST["product_id"])
-) {
+if ($productId <= 0 && isset($_POST["product_id"])) {
     $productId = (int)$_POST["product_id"];
 }
 
@@ -117,9 +105,7 @@ mysqli_stmt_bind_param(
 );
 
 if (!mysqli_stmt_execute($productStmt)) {
-
     mysqli_stmt_close($productStmt);
-
     die("Unable to load product.");
 }
 
@@ -134,9 +120,7 @@ mysqli_stmt_bind_result(
 );
 
 if (!mysqli_stmt_fetch($productStmt)) {
-
     mysqli_stmt_close($productStmt);
-
     header("Location: home.php");
     exit();
 }
@@ -151,7 +135,6 @@ $product = [
 ];
 
 mysqli_stmt_close($productStmt);
-
 $viewActivityStmt = mysqli_prepare(
     $conn,
     "INSERT INTO user_product_activity
@@ -165,7 +148,6 @@ $viewActivityStmt = mysqli_prepare(
 );
 
 if ($viewActivityStmt) {
-
     mysqli_stmt_bind_param(
         $viewActivityStmt,
         "ii",
@@ -173,19 +155,13 @@ if ($viewActivityStmt) {
         $productId
     );
 
-    mysqli_stmt_execute(
-        $viewActivityStmt
-    );
-
-    mysqli_stmt_close(
-        $viewActivityStmt
-    );
+    mysqli_stmt_execute($viewActivityStmt);
+    mysqli_stmt_close($viewActivityStmt);
 }
 
 $productImage = "";
 
 if (!empty($product["image"])) {
-
     $productFileName = basename(
         str_replace(
             "\\",
@@ -193,15 +169,12 @@ if (!empty($product["image"])) {
             $product["image"]
         )
     );
-
-    $productImage =
-        "images/products/" .
+    $productImage ="images/products/" .
         $productFileName;
 }
 
 $averageRating = 0;
 $totalReviews = 0;
-
 $ratingStmt = mysqli_prepare(
     $conn,
     "SELECT
@@ -213,17 +186,12 @@ $ratingStmt = mysqli_prepare(
 );
 
 if ($ratingStmt) {
-
     mysqli_stmt_bind_param(
         $ratingStmt,
         "i",
         $productId
     );
-
-    mysqli_stmt_execute(
-        $ratingStmt
-    );
-
+    mysqli_stmt_execute($ratingStmt);
     mysqli_stmt_bind_result(
         $ratingStmt,
         $averageRatingValue,
@@ -231,21 +199,13 @@ if ($ratingStmt) {
     );
 
     if (mysqli_stmt_fetch($ratingStmt)) {
-
-        $averageRating =
-            (float)$averageRatingValue;
-
-        $totalReviews =
-            (int)$totalReviewsValue;
+        $averageRating =(float)$averageRatingValue;
+        $totalReviews =(int)$totalReviewsValue;
     }
-
-    mysqli_stmt_close(
-        $ratingStmt
-    );
+    mysqli_stmt_close($ratingStmt);
 }
 
 $userReview = null;
-
 $userReviewStmt = mysqli_prepare(
     $conn,
     "SELECT
@@ -262,18 +222,13 @@ $userReviewStmt = mysqli_prepare(
 );
 
 if ($userReviewStmt) {
-
     mysqli_stmt_bind_param(
         $userReviewStmt,
         "ii",
         $productId,
         $userId
     );
-
-    mysqli_stmt_execute(
-        $userReviewStmt
-    );
-
+    mysqli_stmt_execute($userReviewStmt);
     mysqli_stmt_bind_result(
         $userReviewStmt,
         $userReviewId,
@@ -283,7 +238,6 @@ if ($userReviewStmt) {
     );
 
     if (mysqli_stmt_fetch($userReviewStmt)) {
-
         $userReview = [
             "id" => (int)$userReviewId,
             "rating" => (int)$userReviewRating,
@@ -292,13 +246,10 @@ if ($userReviewStmt) {
         ];
     }
 
-    mysqli_stmt_close(
-        $userReviewStmt
-    );
+    mysqli_stmt_close($userReviewStmt);
 }
 
 $reviews = [];
-
 $reviewsStmt = mysqli_prepare(
     $conn,
     "SELECT
@@ -321,17 +272,12 @@ $reviewsStmt = mysqli_prepare(
 );
 
 if ($reviewsStmt) {
-
     mysqli_stmt_bind_param(
         $reviewsStmt,
         "i",
         $productId
     );
-
-    mysqli_stmt_execute(
-        $reviewsStmt
-    );
-
+    mysqli_stmt_execute($reviewsStmt);
     mysqli_stmt_bind_result(
         $reviewsStmt,
         $reviewId,
@@ -345,7 +291,6 @@ if ($reviewsStmt) {
     );
 
     while (mysqli_stmt_fetch($reviewsStmt)) {
-
         $reviews[] = [
             "id" => (int)$reviewId,
             "product_id" => (int)$reviewProductId,
@@ -357,14 +302,10 @@ if ($reviewsStmt) {
             "profile_picture" => $reviewProfilePictureValue
         ];
     }
-
-    mysqli_stmt_close(
-        $reviewsStmt
-    );
+    mysqli_stmt_close($reviewsStmt);
 }
 
 $followUpComments = [];
-
 $commentsStmt = mysqli_prepare(
     $conn,
     "SELECT
@@ -387,17 +328,12 @@ $commentsStmt = mysqli_prepare(
 );
 
 if ($commentsStmt) {
-
     mysqli_stmt_bind_param(
         $commentsStmt,
         "i",
         $productId
     );
-
-    mysqli_stmt_execute(
-        $commentsStmt
-    );
-
+    mysqli_stmt_execute($commentsStmt);
     mysqli_stmt_bind_result(
         $commentsStmt,
         $commentId,
@@ -411,10 +347,7 @@ if ($commentsStmt) {
     );
 
     while (mysqli_stmt_fetch($commentsStmt)) {
-
-        $parentId =
-            (int)$commentParentId;
-
+        $parentId = (int)$commentParentId;
         if (!isset($followUpComments[$parentId])) {
             $followUpComments[$parentId] = [];
         }
@@ -430,23 +363,18 @@ if ($commentsStmt) {
             "profile_picture" => $commentProfilePictureValue
         ];
     }
-
-    mysqli_stmt_close(
-        $commentsStmt
-    );
+    mysqli_stmt_close($commentsStmt);
 }
 
-$displayRating =
-    (int)round($averageRating);
+$displayRating = (int)round($averageRating);
 
-$profileInitial =
-    strtoupper(
-        substr(
-            trim($username),
-            0,
-            1
-        )
-    );
+$profileInitial = strtoupper(
+    substr(
+        trim($username),
+        0,
+        1
+    )
+);
 
 if ($profileInitial === "") {
     $profileInitial = "U";
@@ -464,7 +392,6 @@ $wishlistStmt = mysqli_prepare(
 );
 
 if ($wishlistStmt) {
-
     mysqli_stmt_bind_param(
         $wishlistStmt,
         "ii",
@@ -472,10 +399,7 @@ if ($wishlistStmt) {
         $productId
     );
 
-    mysqli_stmt_execute(
-        $wishlistStmt
-    );
-
+    mysqli_stmt_execute($wishlistStmt);
     mysqli_stmt_bind_result(
         $wishlistStmt,
         $wishlistId
@@ -485,882 +409,798 @@ if ($wishlistStmt) {
         $isWishlisted = true;
     }
 
-    mysqli_stmt_close(
-        $wishlistStmt
-    );
+    mysqli_stmt_close($wishlistStmt);
 }
-
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= e($product["product_name"]) ?> | Inknest
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="css/product_details.css?v=<?php echo time(); ?>"
-    >
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+    <?= e($product["product_name"]) ?> | Inknest
+</title>
+<link rel="stylesheet" href="css/product_details.css?v=<?php echo time(); ?>">
 </head>
 
 <body>
-
 <nav class="navbar">
-
-    <a
-        href="home.php"
-        class="logo"
-    >
-        Inknest
-    </a>
-
-    <div class="nav-right">
-
-        <div class="profile">
-
-            <?php if (!empty($profilePicture)): ?>
-
-                <img
-                    src="<?= e($profilePicture) ?>"
-                    alt="Profile"
-                    class="profile-img"
-                >
-
-            <?php else: ?>
-
-                <div class="profile-initial">
-                    <?= e($profileInitial) ?>
-                </div>
-
-            <?php endif; ?>
-
-            <span>
-                <?= e($username) ?>
-            </span>
-
-        </div>
-
-        <a
-            href="home.php"
-            class="nav-link"
-        >
-            Products
-        </a>
-
-        <a
-            href="cart.php"
-            class="cart-link"
-        >
-            Cart
-
-            <span id="cartCount">
-                0
-            </span>
-
-        </a>
-
-        <a
-            href="logout.php"
-            class="logout"
-        >
-            Logout
-        </a>
-
+<a href="home.php" class="logo">
+    Inknest
+</a>
+<div class="nav-right">
+    <div class="profile">
+        <?php if (!empty($profilePicture)): ?>
+            <img src="<?= e($profilePicture) ?>" alt="Profile" class="profile-img">
+        <?php else: ?>
+            <div class="profile-initial">
+                <?= e($profileInitial) ?>
+            </div>
+        <?php endif; ?>
+        <span>
+            <?= e($username) ?>
+        </span>
     </div>
-
+    <a href="home.php" class="nav-link">
+        Products
+    </a>
+    <a href="cart.php" class="cart-link">
+        Cart
+        <span id="cartCount">
+            0
+        </span>
+    </a>
+    <a href="logout.php"
+        class="logout">
+        Logout
+    </a>
+</div>
 </nav>
 
 <main class="product-page">
+<section class="product-section">
+    <div class="product-image-container">
+        <?php if (!empty($productImage)): ?>
+            <img src="<?= e($productImage) ?>" alt="<?= e($product["product_name"]) ?>" class="product-image">
+        <?php else: ?>
+            <div class="no-product-image">
+                No Image
+            </div>
+        <?php endif; ?>
+    </div>
 
-    <section class="product-section">
+    <div class="product-info">
+        <h1>
+            <?= e($product["product_name"]) ?>
+        </h1>
+        <div class="product-rating">
+            <span class="stars">
+                <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <span
+                        class="star <?= $i <= $displayRating ? "filled" : "" ?>"
+                    >
+                        ★
+                    </span>
+                <?php endfor; ?>
+            </span>
 
-        <div class="product-image-container">
+            <span class="rating-number">
+                <?= number_format($averageRating, 1) ?>
+            </span>
+            <span class="review-count">
+                (<?= $totalReviews ?> reviews)
+            </span>
+        </div>
 
-            <?php if (!empty($productImage)): ?>
+        <div class="product-price">
+            Rs.
+            <?= number_format(
+                (float)$product["price"],
+                2
+            ) ?>
+        </div>
 
-                <img
-                    src="<?= e($productImage) ?>"
-                    alt="<?= e($product["product_name"]) ?>"
-                    class="product-image"
-                >
+        <div class="product-description">
+            <?= nl2br(
+                e($product["description"])
+            ) ?>
+        </div>
+
+        <div class="stock-info">
+            <?php if ((int)$product["stock"] > 0): ?>
+                <span class="in-stock">
+                    In Stock
+                </span>
+
+                <span>
+                    <?= (int)$product["stock"] ?>
+                    available
+                </span>
 
             <?php else: ?>
 
-                <div class="no-product-image">
-                    No Image
-                </div>
+                <span class="out-stock">
+                    Out of Stock
+                </span>
 
             <?php endif; ?>
 
         </div>
 
-        <div class="product-info">
+        <div class="wishlist-action">
 
-            <h1>
-                <?= e($product["product_name"]) ?>
-            </h1>
+            <button
+                type="button"
+                id="wishlistBtn"
+                class="wishlist-btn <?= $isWishlisted ? "active" : "" ?>"
+                data-product-id="<?= $productId ?>"
+            >
+                <?= $isWishlisted
+                    ? "♥ Wishlisted"
+                    : "♡ Wishlist" ?>
+            </button>
 
-            <div class="product-rating">
+            <div
+                id="wishlistMessage"
+                class="wishlist-message"
+            ></div>
 
-                <span class="stars">
+        </div>
 
-                    <?php for (
-                        $i = 1;
-                        $i <= 5;
-                        $i++
-                    ): ?>
+        <?php if ((int)$product["stock"] > 0): ?>
+
+            <div class="quantity-section">
+
+                <label for="quantity">
+                    Quantity
+                </label>
+
+                <div class="quantity-control">
+
+                    <button
+                        type="button"
+                        id="decreaseQty"
+                    >
+                        −
+                    </button>
+
+                    <input
+                        type="number"
+                        id="quantity"
+                        value="1"
+                        min="1"
+                        max="<?= (int)$product["stock"] ?>"
+                    >
+
+                    <button
+                        type="button"
+                        id="increaseQty"
+                    >
+                        +
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="cart-action">
+
+                <button
+                    type="button"
+                    id="addToCartBtn"
+                    class="add-to-cart-btn"
+                    data-product-id="<?= $productId ?>"
+                >
+                    Add to Cart
+                </button>
+
+                <div
+                    id="cartMessage"
+                    class="cart-message"
+                ></div>
+
+            </div>
+
+        <?php else: ?>
+
+            <div class="cart-action">
+
+                <button
+                    type="button"
+                    class="add-to-cart-btn disabled"
+                    disabled
+                >
+                    Out of Stock
+                </button>
+
+            </div>
+
+        <?php endif; ?>
+
+    </div>
+
+</section>
+
+<section class="review-section">
+
+    <div class="section-title">
+
+        <h2>
+            Your Review
+        </h2>
+
+        <p>
+            Share your experience with this product.
+        </p>
+
+    </div>
+
+    <?php if ($userReview === null): ?>
+
+        <form
+            action="submit_review.php"
+            method="POST"
+            class="review-form"
+            id="reviewForm"
+        >
+
+            <input
+                type="hidden"
+                name="product_id"
+                value="<?= $productId ?>"
+            >
+
+            <div class="form-group">
+
+                <label>
+                    Rating
+                </label>
+
+                <div class="rating-input">
+
+                    <?php for ($i = 5; $i >= 1; $i--): ?>
+
+                        <input
+                            type="radio"
+                            name="rating"
+                            value="<?= $i ?>"
+                            id="star<?= $i ?>"
+                            required
+                        >
+
+                        <label
+                            for="star<?= $i ?>"
+                            title="<?= $i ?> star<?= $i > 1 ? "s" : "" ?>"
+                        >
+                            ★
+                        </label>
+
+                    <?php endfor; ?>
+
+                </div>
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="comment">
+                    Comment
+                </label>
+
+                <textarea
+                    name="comment"
+                    id="comment"
+                    rows="5"
+                    maxlength="2000"
+                    placeholder="Write your review..."
+                    required
+                ></textarea>
+
+            </div>
+
+            <button
+                type="submit"
+                class="submit-review-btn"
+            >
+                Submit Review
+            </button>
+
+        </form>
+
+    <?php else: ?>
+
+        <div class="your-review-card">
+
+            <div class="your-review-header">
+
+                <div class="review-user">
+
+                    <?php if (!empty($profilePicture)): ?>
+
+                        <img
+                            src="<?= e($profilePicture) ?>"
+                            alt="Profile"
+                            class="review-avatar"
+                        >
+
+                    <?php else: ?>
+
+                        <div class="review-avatar review-avatar-initial">
+                            <?= e($profileInitial) ?>
+                        </div>
+
+                    <?php endif; ?>
+
+                    <div>
+
+                        <strong>
+                            <?= e($username) ?>
+                        </strong>
+
+                        <div class="review-date">
+
+                            <?= date(
+                                "M d, Y",
+                                strtotime(
+                                    $userReview["created_at"]
+                                )
+                            ) ?>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="review-stars">
+
+                    <?php
+                    $userRating =
+                        (int)$userReview["rating"];
+                    ?>
+
+                    <?php for ($i = 1; $i <= 5; $i++): ?>
 
                         <span
-                            class="star <?= $i <= $displayRating ? "filled" : "" ?>"
+                            class="<?= $i <= $userRating ? "filled" : "" ?>"
                         >
                             ★
                         </span>
 
                     <?php endfor; ?>
 
-                </span>
-
-                <span class="rating-number">
-                    <?= number_format(
-                        $averageRating,
-                        1
-                    ) ?>
-                </span>
-
-                <span class="review-count">
-                    (<?= $totalReviews ?> reviews)
-                </span>
+                </div>
 
             </div>
 
-            <div class="product-price">
-
-                Rs.
-
-                <?= number_format(
-                    (float)$product["price"],
-                    2
-                ) ?>
-
-            </div>
-
-            <div class="product-description">
+            <div class="your-review-text">
 
                 <?= nl2br(
-                    e($product["description"])
+                    e(
+                        $userReview["comment"]
+                    )
                 ) ?>
 
             </div>
 
-            <div class="stock-info">
-
-                <?php if (
-                    (int)$product["stock"] > 0
-                ): ?>
-
-                    <span class="in-stock">
-                        In Stock
-                    </span>
-
-                    <span>
-                        <?= (int)$product["stock"] ?>
-                        available
-                    </span>
-
-                <?php else: ?>
-
-                    <span class="out-stock">
-                        Out of Stock
-                    </span>
-
-                <?php endif; ?>
-
-            </div>
-
-            <div class="wishlist-action">
-
-                <button
-                    type="button"
-                    id="wishlistBtn"
-                    class="wishlist-btn"
-                    data-product-id="<?= $productId ?>"
-                >
-                    <?= $isWishlisted
-                        ? "♥ Wishlisted"
-                        : "♡ Wishlist" ?>
-                </button>
-
-                <div
-                    id="wishlistMessage"
-                    class="wishlist-message"
-                ></div>
-
-            </div>
-
-            <?php if (
-                (int)$product["stock"] > 0
-            ): ?>
-
-                <div class="quantity-section">
-
-                    <label for="quantity">
-                        Quantity
-                    </label>
-
-                    <div class="quantity-control">
-
-                        <button
-                            type="button"
-                            id="decreaseQty"
-                        >
-                            −
-                        </button>
-
-                        <input
-                            type="number"
-                            id="quantity"
-                            value="1"
-                            min="1"
-                            max="<?= (int)$product["stock"] ?>"
-                        >
-
-                        <button
-                            type="button"
-                            id="increaseQty"
-                        >
-                            +
-                        </button>
-
-                    </div>
-
-                </div>
-
-                <div class="cart-action">
-
-                    <button
-                        type="button"
-                        id="addToCartBtn"
-                        class="add-to-cart-btn"
-                        data-product-id="<?= $productId ?>"
-                    >
-                        Add to Cart
-                    </button>
-
-                    <div
-                        id="cartMessage"
-                        class="cart-message"
-                    ></div>
-
-                </div>
-
-            <?php else: ?>
-
-                <div class="cart-action">
-
-                    <button
-                        type="button"
-                        class="add-to-cart-btn disabled"
-                        disabled
-                    >
-                        Out of Stock
-                    </button>
-
-                </div>
-
-            <?php endif; ?>
-
         </div>
 
-    </section>
+        <form
+            id="followUpForm"
+            class="followup-form"
+            method="POST"
+        >
 
-    <section class="review-section">
-
-        <div class="section-title">
-
-            <h2>
-                Your Review
-            </h2>
-
-            <p>
-                Share your experience with this product.
-            </p>
-
-        </div>
-
-        <?php if ($userReview === null): ?>
-
-            <form
-                action="submit_review.php"
-                method="POST"
-                class="review-form"
-                id="reviewForm"
+            <input
+                type="hidden"
+                name="product_id"
+                value="<?= $productId ?>"
             >
 
-                <input
-                    type="hidden"
-                    name="product_id"
-                    value="<?= $productId ?>"
-                >
+            <input
+                type="hidden"
+                name="review_id"
+                value="<?= (int)$userReview["id"] ?>"
+            >
 
-                <div class="form-group">
+            <div class="form-group">
 
-                    <label>
-                        Rating
-                    </label>
+                <label for="followUpComment">
+                    Add Another Comment
+                </label>
 
-                    <div class="rating-input">
+                <textarea
+                    name="comment"
+                    id="followUpComment"
+                    rows="4"
+                    maxlength="2000"
+                    placeholder="Add more to your review..."
+                    required
+                ></textarea>
 
-                        <?php for (
-                            $i = 5;
-                            $i >= 1;
-                            $i--
-                        ): ?>
+            </div>
 
-                            <input
-                                type="radio"
-                                name="rating"
-                                value="<?= $i ?>"
-                                id="star<?= $i ?>"
-                                required
-                            >
+            <button
+                type="submit"
+                class="comment-btn"
+                id="followUpSubmit"
+            >
+                Add Comment
+            </button>
 
-                            <label
-                                for="star<?= $i ?>"
-                                title="<?= $i ?> star<?= $i > 1 ? "s" : "" ?>"
-                            >
-                                ★
-                            </label>
+            <div
+                id="followUpMessage"
+                class="follow-up-message"
+            ></div>
 
-                        <?php endfor; ?>
+        </form>
 
-                    </div>
+    <?php endif; ?>
 
-                </div>
+</section>
 
-                <div class="form-group">
+<section class="feedback-section">
 
-                    <label for="comment">
-                        Comment
-                    </label>
+    <div class="section-title">
 
-                    <textarea
-                        name="comment"
-                        id="comment"
-                        rows="5"
-                        maxlength="2000"
-                        placeholder="Write your review..."
-                        required
-                    ></textarea>
+        <h2>
+            Customer Feedback
+        </h2>
 
-                </div>
+        <p>
+            See what customers are saying about this product.
+        </p>
 
-                <button
-                    type="submit"
-                    class="submit-review-btn"
-                >
-                    Submit Review
-                </button>
+    </div>
 
-            </form>
+    <?php if (empty($reviews)): ?>
 
-        <?php else: ?>
+        <div class="no-reviews">
 
-            <div class="your-review-card">
+            No reviews yet.
+            Be the first to review this product.
 
-                <div class="your-review-header">
+        </div>
 
-                    <div class="review-user">
+    <?php else: ?>
 
-                        <?php if (!empty($profilePicture)): ?>
+        <div class="reviews-list">
 
-                            <img
-                                src="<?= e($profilePicture) ?>"
-                                alt="Profile"
-                                class="review-avatar"
-                            >
+            <?php foreach ($reviews as $review): ?>
 
-                        <?php else: ?>
+                <?php
 
-                            <div class="review-avatar review-avatar-initial">
-                                <?= e($profileInitial) ?>
-                            </div>
+                $reviewId =
+                    (int)$review["id"];
 
-                        <?php endif; ?>
+                $reviewUsername =
+                    $review["user_name"] ??
+                    "User";
 
-                        <div>
-
-                            <strong>
-                                <?= e($username) ?>
-                            </strong>
-
-                            <div class="review-date">
-
-                                <?= date(
-                                    "M d, Y",
-                                    strtotime(
-                                        $userReview["created_at"]
-                                    )
-                                ) ?>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="review-stars">
-
-                        <?php
-                        $userRating =
-                            (int)$userReview["rating"];
-                        ?>
-
-                        <?php for (
-                            $i = 1;
-                            $i <= 5;
-                            $i++
-                        ): ?>
-
-                            <span
-                                class="<?= $i <= $userRating ? "filled" : "" ?>"
-                            >
-                                ★
-                            </span>
-
-                        <?php endfor; ?>
-
-                    </div>
-
-                </div>
-
-                <div class="your-review-text">
-
-                    <?= nl2br(
-                        e(
-                            $userReview["comment"]
+                $reviewInitial =
+                    strtoupper(
+                        substr(
+                            trim($reviewUsername),
+                            0,
+                            1
                         )
-                    ) ?>
+                    );
 
-                </div>
+                if ($reviewInitial === "") {
+                    $reviewInitial = "U";
+                }
 
-            </div>
+                $reviewRating =
+                    (int)$review["rating"];
 
-            <form
-                id="followUpForm"
-                class="follow-up-form"
-            >
+                $reviewProfilePicture = "";
 
-                <input
-                    type="hidden"
-                    name="product_id"
-                    value="<?= $productId ?>"
-                >
+                if (
+                    !empty(
+                        $review["profile_picture"]
+                    )
+                ) {
 
-                <input
-                    type="hidden"
-                    name="review_id"
-                    value="<?= (int)$userReview["id"] ?>"
-                >
-
-                <div class="form-group">
-
-                    <label for="followUpComment">
-                        Add Another Comment
-                    </label>
-
-                    <textarea
-                        name="comment"
-                        id="followUpComment"
-                        rows="4"
-                        maxlength="2000"
-                        placeholder="Add more to your review..."
-                        required
-                    ></textarea>
-
-                </div>
-
-                <button
-                    type="submit"
-                    class="comment-btn"
-                    id="followUpSubmit"
-                >
-                    Add Comment
-                </button>
-
-                <div
-                    id="followUpMessage"
-                    class="follow-up-message"
-                ></div>
-
-            </form>
-
-        <?php endif; ?>
-
-    </section>
-
-    <section class="feedback-section">
-
-        <div class="section-title">
-
-            <h2>
-                Customer Feedback
-            </h2>
-
-            <p>
-                See what customers are saying about this product.
-            </p>
-
-        </div>
-
-        <?php if (empty($reviews)): ?>
-
-            <div class="no-reviews">
-
-                No reviews yet.
-                Be the first to review this product.
-
-            </div>
-
-        <?php else: ?>
-
-            <div class="reviews-list">
-
-                <?php foreach (
-                    $reviews as $review
-                ): ?>
-
-                    <?php
-
-                    $reviewId =
-                        (int)$review["id"];
-
-                    $reviewUsername =
-                        $review["user_name"]
-                        ??
-                        "User";
-
-                    $reviewInitial =
-                        strtoupper(
-                            substr(
-                                trim($reviewUsername),
-                                0,
-                                1
+                    $reviewProfileFile =
+                        basename(
+                            str_replace(
+                                "\\",
+                                "/",
+                                $review["profile_picture"]
                             )
                         );
 
-                    if ($reviewInitial === "") {
-                        $reviewInitial = "U";
-                    }
+                    $reviewProfilePicture =
+                        "images/profile/" .
+                        $reviewProfileFile;
+                }
 
-                    $reviewRating =
-                        (int)$review["rating"];
+                ?>
 
-                    $reviewProfilePicture = "";
+                <article class="review-card">
 
-                    if (
+                    <div class="review-header">
+
+                        <div class="review-user">
+
+                            <?php if (!empty($reviewProfilePicture)): ?>
+
+                                <img
+                                    src="<?= e($reviewProfilePicture) ?>"
+                                    alt="<?= e($reviewUsername) ?>"
+                                    class="review-avatar"
+                                >
+
+                            <?php else: ?>
+
+                                <div class="review-avatar review-avatar-initial">
+
+                                    <?= e($reviewInitial) ?>
+
+                                </div>
+
+                            <?php endif; ?>
+
+                            <div class="review-user-details">
+
+                                <strong>
+                                    <?= e($reviewUsername) ?>
+                                </strong>
+
+                                <span class="review-date">
+
+                                    <?= date(
+                                        "M d, Y",
+                                        strtotime(
+                                            $review["created_at"]
+                                        )
+                                    ) ?>
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="review-stars">
+
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
+
+                                <span
+                                    class="<?= $i <= $reviewRating ? "filled" : "" ?>"
+                                >
+                                    ★
+                                </span>
+
+                            <?php endfor; ?>
+
+                        </div>
+
+                    </div>
+
+                    <div class="review-comment">
+
+                        <?= nl2br(
+                            e(
+                                $review["comment"]
+                            )
+                        ) ?>
+
+                    </div>
+
+                    <?php if (
+                        isset(
+                            $followUpComments[$reviewId]
+                        ) &&
                         !empty(
-                            $review["profile_picture"]
+                            $followUpComments[$reviewId]
                         )
-                    ) {
+                    ): ?>
 
-                        $reviewProfileFile =
-                            basename(
-                                str_replace(
-                                    "\\",
-                                    "/",
-                                    $review["profile_picture"]
-                                )
-                            );
+                        <div class="review-replies">
 
-                        $reviewProfilePicture =
-                            "images/profile/" .
-                            $reviewProfileFile;
-                    }
+                            <div class="review-replies-title">
+                                Additional comments
+                            </div>
 
-                    ?>
+                            <?php foreach (
+                                $followUpComments[$reviewId]
+                                as $followUp
+                            ): ?>
 
-                    <article class="review-card">
+                                <?php
 
-                        <div class="review-header">
+                                $commentUsername =
+                                    $followUp["user_name"] ??
+                                    "User";
 
-                            <div class="review-user">
+                                $commentInitial =
+                                    strtoupper(
+                                        substr(
+                                            trim(
+                                                $commentUsername
+                                            ),
+                                            0,
+                                            1
+                                        )
+                                    );
 
-                                <?php if (
+                                if ($commentInitial === "") {
+                                    $commentInitial = "U";
+                                }
+
+                                $commentProfilePicture = "";
+
+                                if (
                                     !empty(
-                                        $reviewProfilePicture
+                                        $followUp[
+                                            "profile_picture"
+                                        ]
                                     )
-                                ): ?>
+                                ) {
 
-                                    <img
-                                        src="<?= e($reviewProfilePicture) ?>"
-                                        alt="<?= e($reviewUsername) ?>"
-                                        class="review-avatar"
-                                    >
-
-                                <?php else: ?>
-
-                                    <div class="review-avatar review-avatar-initial">
-                                        <?= e($reviewInitial) ?>
-                                    </div>
-
-                                <?php endif; ?>
-
-                                <div class="review-user-details">
-
-                                    <strong>
-                                        <?= e(
-                                            $reviewUsername
-                                        ) ?>
-                                    </strong>
-
-                                    <span class="review-date">
-                                        <?= date(
-                                            "M d, Y",
-                                            strtotime(
-                                                $review["created_at"]
-                                            )
-                                        ) ?>
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                            <div class="review-stars">
-
-                                <?php for (
-                                    $i = 1;
-                                    $i <= 5;
-                                    $i++
-                                ): ?>
-
-                                    <span
-                                        class="<?= $i <= $reviewRating ? "filled" : "" ?>"
-                                    >
-                                        ★
-                                    </span>
-
-                                <?php endfor; ?>
-
-                            </div>
-
-                        </div>
-
-                        <div class="review-comment">
-
-                            <?= nl2br(
-                                e(
-                                    $review["comment"]
-                                )
-                            ) ?>
-
-                        </div>
-
-                        <?php if (
-                            isset(
-                                $followUpComments[
-                                    $reviewId
-                                ]
-                            )
-                            &&
-                            !empty(
-                                $followUpComments[
-                                    $reviewId
-                                ]
-                            )
-                        ): ?>
-
-                            <div class="review-replies">
-
-                                <div class="review-replies-title">
-                                    Additional comments
-                                </div>
-
-                                <?php foreach (
-                                    $followUpComments[
-                                        $reviewId
-                                    ] as $followUp
-                                ): ?>
-
-                                    <?php
-
-                                    $commentUsername =
-                                        $followUp["user_name"]
-                                        ??
-                                        "User";
-
-                                    $commentInitial =
-                                        strtoupper(
-                                            substr(
-                                                trim(
-                                                    $commentUsername
-                                                ),
-                                                0,
-                                                1
+                                    $commentProfileFile =
+                                        basename(
+                                            str_replace(
+                                                "\\",
+                                                "/",
+                                                $followUp[
+                                                    "profile_picture"
+                                                ]
                                             )
                                         );
 
-                                    if (
-                                        $commentInitial === ""
-                                    ) {
-                                        $commentInitial = "U";
-                                    }
+                                    $commentProfilePicture =
+                                        "images/profile/" .
+                                        $commentProfileFile;
+                                }
 
-                                    $commentProfilePicture = "";
+                                ?>
 
-                                    if (
-                                        !empty(
-                                            $followUp[
-                                                "profile_picture"
-                                            ]
-                                        )
-                                    ) {
+                                <div class="review-reply">
 
-                                        $commentProfileFile =
-                                            basename(
-                                                str_replace(
-                                                    "\\",
-                                                    "/",
-                                                    $followUp[
-                                                        "profile_picture"
-                                                    ]
-                                                )
-                                            );
+                                    <div class="review-reply-header">
 
-                                        $commentProfilePicture =
-                                            "images/profile/" .
-                                            $commentProfileFile;
-                                    }
+                                        <?php if (!empty($commentProfilePicture)): ?>
 
-                                    ?>
+                                            <img
+                                                src="<?= e($commentProfilePicture) ?>"
+                                                alt="<?= e($commentUsername) ?>"
+                                                class="review-avatar small"
+                                            >
 
-                                    <div class="review-reply">
+                                        <?php else: ?>
 
-                                        <div class="review-reply-header">
+                                            <div class="review-avatar small review-avatar-initial">
 
-                                            <?php if (
-                                                !empty(
-                                                    $commentProfilePicture
-                                                )
-                                            ): ?>
-
-                                                <img
-                                                    src="<?= e($commentProfilePicture) ?>"
-                                                    alt="<?= e($commentUsername) ?>"
-                                                    class="review-avatar small"
-                                                >
-
-                                            <?php else: ?>
-
-                                                <div class="review-avatar small review-avatar-initial">
-
-                                                    <?= e(
-                                                        $commentInitial
-                                                    ) ?>
-
-                                                </div>
-
-                                            <?php endif; ?>
-
-                                            <div class="review-reply-user">
-
-                                                <strong>
-                                                    <?= e(
-                                                        $commentUsername
-                                                    ) ?>
-                                                </strong>
-
-                                                <span>
-
-                                                    <?= date(
-                                                        "M d, Y",
-                                                        strtotime(
-                                                            $followUp[
-                                                                "created_at"
-                                                            ]
-                                                        )
-                                                    ) ?>
-
-                                                </span>
+                                                <?= e(
+                                                    $commentInitial
+                                                ) ?>
 
                                             </div>
 
-                                        </div>
+                                        <?php endif; ?>
 
-                                        <div class="review-reply-text">
+                                        <div class="review-reply-user">
 
-                                            <?= nl2br(
-                                                e(
-                                                    $followUp[
-                                                        "comment"
-                                                    ]
-                                                )
-                                            ) ?>
+                                            <strong>
+                                                <?= e(
+                                                    $commentUsername
+                                                ) ?>
+                                            </strong>
+
+                                            <span>
+
+                                                <?= date(
+                                                    "M d, Y",
+                                                    strtotime(
+                                                        $followUp[
+                                                            "created_at"
+                                                        ]
+                                                    )
+                                                ) ?>
+
+                                            </span>
 
                                         </div>
 
                                     </div>
 
-                                <?php endforeach; ?>
+                                    <div class="review-reply-text">
 
-                            </div>
+                                        <?= nl2br(
+                                            e(
+                                                $followUp[
+                                                    "comment"
+                                                ]
+                                            )
+                                        ) ?>
 
-                        <?php endif; ?>
+                                    </div>
 
-                    </article>
+                                </div>
 
-                <?php endforeach; ?>
+                            <?php endforeach; ?>
 
-            </div>
+                        </div>
 
-        <?php endif; ?>
+                    <?php endif; ?>
 
-    </section>
+                </article>
+
+            <?php endforeach; ?>
+
+        </div>
+
+    <?php endif; ?>
+
+</section>
+```
 
 </main>
 
-<script src="js/product_details.js?v=<?php echo time(); ?>"></script>
 <footer class="footer">
-    <div class="footer-content">
-        <div class="footer-brand">
-            <h2>Inknest</h2>
-            <p>Your trusted online shopping destination.</p>
-        </div>
-        <div class="footer-links">
-            <div class="footer-contact">
-                <h3>Contact Us</h3>
-                <p>
-                    <strong>Phone:</strong>
-                    +977-9800000000
-                </p>
-                <p>
-                    <strong>Email:</strong>
-                    support@inknest.com
-                </p>
-                <p>
-                    <strong>Address:</strong>
-                    Kathmandu, Nepal
-                </p>
-            </div>
-        </div>
-    </div>
-    <div class="footer-bottom">
+
+
+<div class="footer-content">
+
+    <div class="footer-brand">
+
+        <h2>
+            Inknest
+        </h2>
+
         <p>
-            &copy; <?php echo date("Y"); ?> Inknest. All rights reserved.
+            Your trusted online shopping destination.
         </p>
+
     </div>
+
+    <div class="footer-links">
+
+        <div class="footer-contact">
+
+            <h3>
+                Contact Us
+            </h3>
+
+            <p>
+                <strong>Phone:</strong>
+                +977-9800000000
+            </p>
+
+            <p>
+                <strong>Email:</strong>
+                support@inknest.com
+            </p>
+
+            <p>
+                <strong>Address:</strong>
+                Kathmandu, Nepal
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="footer-bottom">
+
+    <p>
+        &copy;
+        <?php echo date("Y"); ?>
+        Inknest.
+        All rights reserved.
+    </p>
+
+</div>
+
 </footer>
+
+<script src="js/product_details.js?v=<?php echo time(); ?>"></script>
+
 </body>
+
 </html>

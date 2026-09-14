@@ -1,104 +1,96 @@
 <?php
+ob_start();
+
+mysqli_report(MYSQLI_REPORT_OFF);
+
 session_start();
+
 include "config/database.php";
-header("Content-Type: application/json");
+
+header("Content-Type: application/json; charset=UTF-8");
+
+function respond($success, $message = "", $products = [])
+{
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    echo json_encode([
+        "success" => $success,
+        "message" => $message,
+        "products" => $products
+    ], JSON_UNESCAPED_UNICODE);
+
+    exit();
+}
 
 if (!isset($_SESSION["user_id"])) {
-    echo json_encode([]);
-    exit();
+    respond(false, "Please login first.", []);
 }
 
-if (!isset($_GET["ids"]) || trim($_GET["ids"]) === "") {
-    echo json_encode([]);
-    exit();
+$ids = isset($_GET["ids"])
+    ? trim($_GET["ids"])
+    : "";
+
+if ($ids === "") {
+    respond(true, "Cart is empty.", []);
 }
 
-$ids = explode(
-    ",",
-    $_GET["ids"]
-);
+$rawIds = explode(",", $ids);
+$productIds = [];
 
-$ids = array_map(
-    "intval",
-    $ids
-);
+foreach ($rawIds as $id) {
+    $id = (int)trim($id);
 
-$ids = array_filter(
-    $ids,
-    function ($id) {
-        return $id > 0;
+    if ($id > 0) {
+        $productIds[] = $id;
     }
-);
-
-$ids = array_unique($ids);
-
-if (empty($ids)) {
-    echo json_encode([]);
-    exit();
 }
 
-$placeholders = implode(
-    ",",
-    array_fill(
-        0,
-        count($ids),
-        "?"
-    )
-);
+$productIds = array_values(array_unique($productIds));
 
-$sql = "SELECT
-            id,
-            product_name,
-            description,
-            price,
-            image
-        FROM products
-        WHERE id IN ($placeholders)";
-
-$stmt = mysqli_prepare(
-    $conn,
-    $sql
-);
-
-if (!$stmt) {
-    echo json_encode([
-        "error" => "Failed to prepare database query."
-    ]);
-    exit();
+if (empty($productIds)) {
+    respond(true, "Cart is empty.", []);
 }
 
-$types = str_repeat(
-    "i",
-    count($ids)
-);
+$idList = implode(",", $productIds);
 
-mysqli_stmt_bind_param(
-    $stmt,
-    $types,
-    ...$ids
-);
+$sql = "
+    SELECT
+        id,
+        product_name,
+        description,
+        price,
+        image,
+        stock
+    FROM products
+    WHERE id IN ($idList)
+";
 
-if (!mysqli_stmt_execute($stmt)) {
-    mysqli_stmt_close($stmt);
-    echo json_encode([
-        "error" => "Failed to execute database query."
-    ]);
-    exit();
+$result = mysqli_query($conn, $sql);
+
+if (!$result) {
+    respond(false, "Unable to load cart products.", []);
 }
 
-$result = mysqli_stmt_get_result($stmt);
 $products = [];
 
-while ($product =mysqli_fetch_assoc($result)) {
+while ($row = mysqli_fetch_assoc($result)) {
     $products[] = [
-        "id" => (int) $product["id"],
-        "product_name" => $product["product_name"],
-        "description" => $product["description"],
-        "price" => (float) $product["price"],
-        "image" => $product["image"]
+        "id" => (int)$row["id"],
+        "product_name" => $row["product_name"],
+        "description" => $row["description"],
+        "price" => (float)$row["price"],
+        "image" => $row["image"],
+        "stock" => (int)$row["stock"]
     ];
 }
-mysqli_stmt_close($stmt);
-echo json_encode($products);
-exit();
+
+mysqli_free_result($result);
+
+respond(
+    true,
+    "Cart loaded successfully.",
+    $products
+);
 ?>

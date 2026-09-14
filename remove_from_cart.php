@@ -1,70 +1,102 @@
 <?php
-session_start();
-include "config/database.php";
-header("Content-Type: application/json");
 
-if (!isset($_SESSION["user_id"])) {
+ob_start();
+
+mysqli_report(MYSQLI_REPORT_OFF);
+
+session_start();
+
+include "config/database.php";
+
+header("Content-Type: application/json; charset=UTF-8");
+
+function responseJson($success, $message)
+{
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
     echo json_encode([
-        "success" => false,
-        "message" => "Please login first."
-    ]);
-    exit();
+        "success" => $success,
+        "message" => $message
+    ], JSON_UNESCAPED_UNICODE);
+
+    exit;
 }
 
-$userId = (int) $_SESSION["user_id"];
+if (!isset($_SESSION["user_id"])) {
+    responseJson(false, "Please login first.");
+}
+
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    responseJson(false, "Invalid request.");
+}
+
+$userId = (int)$_SESSION["user_id"];
+
 $productId = isset($_POST["product_id"])
-    ? (int) $_POST["product_id"]
-    : 0;
-$quantity = isset($_POST["quantity"])
-    ? (int) $_POST["quantity"]
+    ? (int)$_POST["product_id"]
     : 0;
 
-if ($productId <= 0 || $quantity <= 0) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid product or quantity."
-    ]);
-    exit();
+$quantity = isset($_POST["quantity"])
+    ? (int)$_POST["quantity"]
+    : 0;
+
+if ($productId <= 0) {
+    responseJson(false, "Invalid product.");
+}
+
+if ($quantity <= 0) {
+    responseJson(false, "Invalid quantity.");
 }
 
 mysqli_begin_transaction($conn);
 
 try {
-    $sql = mysqli_prepare(
+
+    $stockSql = mysqli_prepare(
         $conn,
         "UPDATE products
          SET stock = stock + ?
          WHERE id = ?"
     );
 
-
-    if (!$sql) {
-        throw new Exception("Database error.");
+    if (!$stockSql) {
+        throw new Exception("Unable to prepare stock query.");
     }
 
     mysqli_stmt_bind_param(
-        $sql,
+        $stockSql,
         "ii",
         $quantity,
         $productId
     );
 
-
-    if (!mysqli_stmt_execute($sql)) {
-        mysqli_stmt_close($sql);
-        throw new Exception("Failed to restore stock.");
+    if (!mysqli_stmt_execute($stockSql)) {
+        mysqli_stmt_close($stockSql);
+        throw new Exception("Failed to restore product stock.");
     }
-    mysqli_stmt_close($sql);
+
+    if (mysqli_stmt_affected_rows($stockSql) <= 0) {
+        mysqli_stmt_close($stockSql);
+        throw new Exception("Product not found.");
+    }
+
+    mysqli_stmt_close($stockSql);
+
     $activityType = "Remove from Cart";
+
     $activitySql = mysqli_prepare(
         $conn,
         "INSERT INTO user_product_activity
-            (user_id, product_id, activity_type)
-         VALUES (?, ?, ?)"
+        (user_id, product_id, activity_type)
+        VALUES (?, ?, ?)"
     );
 
     if (!$activitySql) {
-        throw new Exception("Could not prepare activity query.");
+        throw new Exception(
+            "Unable to prepare activity query."
+        );
     }
 
     mysqli_stmt_bind_param(
@@ -77,22 +109,28 @@ try {
 
     if (!mysqli_stmt_execute($activitySql)) {
         mysqli_stmt_close($activitySql);
-        throw new Exception("Failed to record activity.");
+
+        throw new Exception(
+            "Failed to record cart activity."
+        );
     }
 
     mysqli_stmt_close($activitySql);
+
     mysqli_commit($conn);
-    echo json_encode([
-        "success" => true,
-        "message" => "Product removed from cart and stock restored."
-    ]);
-    exit();
-} catch (Exception $e) {
+
+    responseJson(
+        true,
+        "Product removed from cart and stock restored."
+    );
+
+} catch (Throwable $e) {
+
     mysqli_rollback($conn);
-    echo json_encode([
-        "success" => false,
-        "message" => $e->getMessage()
-    ]);
-    exit();
+
+    responseJson(
+        false,
+        $e->getMessage()
+    );
 }
 ?>
