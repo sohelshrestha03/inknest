@@ -12,7 +12,6 @@ function respond($success, $message)
         "success" => $success,
         "message" => $message
     ]);
-
     exit();
 }
 
@@ -30,8 +29,8 @@ $productId = isset($_POST["product_id"])
     ? (int)$_POST["product_id"]
     : 0;
 
-$rating = isset($_POST["rating"])
-    ? (int)$_POST["rating"]
+$reviewId = isset($_POST["review_id"])
+    ? (int)$_POST["review_id"]
     : 0;
 
 $comment = trim($_POST["comment"] ?? "");
@@ -40,8 +39,8 @@ if ($productId <= 0) {
     respond(false, "Invalid product.");
 }
 
-if ($rating < 1 || $rating > 5) {
-    respond(false, "Please select a valid rating.");
+if ($reviewId <= 0) {
+    respond(false, "Invalid review.");
 }
 
 if ($comment === "") {
@@ -71,50 +70,65 @@ mysqli_stmt_bind_param(
 );
 
 mysqli_stmt_execute($productSql);
-
 mysqli_stmt_store_result($productSql);
 
-$productExists =
-    mysqli_stmt_num_rows($productSql) > 0;
+if (mysqli_stmt_num_rows($productSql) === 0) {
 
-mysqli_stmt_close($productSql);
+    mysqli_stmt_close($productSql);
 
-if (!$productExists) {
     respond(false, "Product not found.");
 }
 
-$checkSql = mysqli_prepare(
+mysqli_stmt_close($productSql);
+
+$reviewSql = mysqli_prepare(
     $conn,
-    "SELECT id
+    "SELECT id, rating
      FROM product_reviews
-     WHERE product_id = ?
-     AND user_id = ?
-     AND parent_review_id IS NULL
+     WHERE id = ?
+       AND product_id = ?
+       AND user_id = ?
+       AND parent_review_id IS NULL
      LIMIT 1"
 );
 
-if (!$checkSql) {
+if (!$reviewSql) {
     respond(false, "Database error.");
 }
 
 mysqli_stmt_bind_param(
-    $checkSql,
-    "ii",
+    $reviewSql,
+    "iii",
+    $reviewId,
     $productId,
     $userId
 );
 
-mysqli_stmt_execute($checkSql);
+mysqli_stmt_execute($reviewSql);
 
-mysqli_stmt_store_result($checkSql);
+mysqli_stmt_bind_result(
+    $reviewSql,
+    $parentReviewId,
+    $parentRating
+);
 
-$alreadyReviewed =
-    mysqli_stmt_num_rows($checkSql) > 0;
+if (!mysqli_stmt_fetch($reviewSql)) {
 
-mysqli_stmt_close($checkSql);
+    mysqli_stmt_close($reviewSql);
 
-if ($alreadyReviewed) {
-    respond(false, "You have already reviewed this product.");
+    respond(
+        false,
+        "The review could not be found."
+    );
+}
+
+mysqli_stmt_close($reviewSql);
+
+$parentReviewId = (int)$parentReviewId;
+$parentRating = (int)$parentRating;
+
+if ($parentRating < 1 || $parentRating > 5) {
+    respond(false, "The original review has an invalid rating.");
 }
 
 $insertSql = mysqli_prepare(
@@ -128,20 +142,21 @@ $insertSql = mysqli_prepare(
         parent_review_id,
         created_at
     )
-    VALUES (?, ?, ?, ?, NULL, NOW())"
+    VALUES (?, ?, ?, ?, ?, NOW())"
 );
 
 if (!$insertSql) {
-    respond(false, "Unable to prepare review.");
+    respond(false, "Unable to prepare comment.");
 }
 
 mysqli_stmt_bind_param(
     $insertSql,
-    "iiis",
+    "iiisi",
     $productId,
     $userId,
-    $rating,
-    $comment
+    $parentRating,
+    $comment,
+    $parentReviewId
 );
 
 if (!mysqli_stmt_execute($insertSql)) {
@@ -150,7 +165,7 @@ if (!mysqli_stmt_execute($insertSql)) {
 
     respond(
         false,
-        "Unable to submit review."
+        "Unable to add comment."
     );
 }
 
@@ -158,7 +173,5 @@ mysqli_stmt_close($insertSql);
 
 respond(
     true,
-    "Review submitted successfully."
+    "Comment added successfully."
 );
-
-?>
