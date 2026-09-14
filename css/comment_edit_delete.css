@@ -1,0 +1,45 @@
+.comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.comment-actions button {
+    padding: 6px 14px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.edit-comment-btn {
+    background: #ffffff;
+    color: #333333;
+    border: 1px solid #333333;
+}
+
+.edit-comment-btn:hover {
+    background: #333333;
+    color: #ffffff;
+}
+
+.delete-comment-btn {
+    background: #ffffff;
+    color: #d32f2f;
+    border: 1px solid #d32f2f;
+}
+
+.delete-comment-btn:hover {
+    background: #d32f2f;
+    color: #ffffff;
+}
+
+.comment-actions button:active {
+    transform: scale(0.97);
+}
+
+.comment-actions button:focus {
+    outline: none;
+}

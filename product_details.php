@@ -422,6 +422,7 @@ if ($wishlistStmt) {
     <?= e($product["product_name"]) ?> | Inknest
 </title>
 <link rel="stylesheet" href="css/product_details.css?v=<?php echo time(); ?>">
+<link rel="stylesheet" href="css/comment_edit_delete.css?v=<?php echo time(); ?>">
 </head>
 
 <body>
@@ -1107,17 +1108,40 @@ if ($wishlistStmt) {
 
                                     </div>
 
-                                    <div class="review-reply-text">
-
+                                    <div
+                                        class="review-reply-text"
+                                        id="comment-text-<?= (int)$followUp["id"] ?>"
+                                    >
                                         <?= nl2br(
                                             e(
-                                                $followUp[
-                                                    "comment"
-                                                ]
+                                                $followUp["comment"]
                                             )
                                         ) ?>
-
                                     </div>
+
+                                    <?php if ((int)$followUp["user_id"] === $userId): ?>
+
+                                        <div class="comment-actions">
+
+                                            <button
+                                                type="button"
+                                                class="edit-comment-btn"
+                                                data-comment-id="<?= (int)$followUp["id"] ?>"
+                                            >
+                                                Edit
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="delete-comment-btn"
+                                                data-comment-id="<?= (int)$followUp["id"] ?>"
+                                            >
+                                                Delete
+                                            </button>
+
+                                        </div>
+
+                                    <?php endif; ?>
 
                                 </div>
 
@@ -1136,7 +1160,6 @@ if ($wishlistStmt) {
     <?php endif; ?>
 
 </section>
-```
 
 </main>
 
@@ -1200,6 +1223,8 @@ if ($wishlistStmt) {
 </footer>
 
 <script src="js/product_details.js?v=<?php echo time(); ?>"></script>
+<script src="js/comment_edit_delete.js?v=<?php echo time(); ?>"></script>
+
 
 </body>
 
