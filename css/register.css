@@ -10,7 +10,6 @@ body {
     color: #111;
 }
 
-
 .navigation {
     height: 65px;
     background: #ffffff;
@@ -38,8 +37,6 @@ body {
     text-decoration: underline;
 }
 
-
-
 .register-container {
     min-height: calc(100vh - 65px);
 
@@ -49,8 +46,6 @@ body {
 
     padding: 40px 20px;
 }
-
-
 
 .register-card {
     width: 100%;
@@ -63,8 +58,6 @@ body {
 
     padding: 35px;
 }
-
-
 
 .register-card h2 {
     text-align: center;
@@ -79,8 +72,6 @@ body {
     font-size: 14px;
     margin-bottom: 30px;
 }
-
-
 
 .data {
     margin-bottom: 18px;
@@ -118,8 +109,6 @@ body {
 .data input::placeholder {
     color: #aaa;
 }
-
-
 
 .buttons {
     display: flex;
@@ -186,7 +175,6 @@ body {
     font-size: 12px;
     margin-top: 5px;
 }
-
 
 @media (max-width: 600px) {
 
