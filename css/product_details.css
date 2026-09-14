@@ -739,8 +739,6 @@ textarea {
     font-size: 14px;
 }
 
-/* Footer */
-
 .footer {
     margin-top: 45px;
     background: #111111;
@@ -816,10 +814,7 @@ textarea {
     font-size: 11px;
 }
 
-/* Tablet */
-
 @media (max-width: 800px) {
-
     .navbar {
         padding: 0 4%;
         min-height: 64px;
@@ -897,10 +892,7 @@ textarea {
     }
 }
 
-/* Mobile */
-
 @media (max-width: 700px) {
-
     .footer {
         padding: 28px 20px 14px;
     }
@@ -930,7 +922,6 @@ textarea {
 }
 
 @media (max-width: 500px) {
-
     .navbar {
         padding: 0 15px;
     }
@@ -1075,9 +1066,7 @@ textarea {
     }
 }
 
-
 @media (max-width: 360px) {
-
     .navbar {
         padding: 0 10px;
     }

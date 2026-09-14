@@ -2,7 +2,6 @@
 session_start();
 include "../config/database.php";
 header("Content-Type: application/json");
-
 if (!isset($_SESSION["user_id"])) {
     echo json_encode([
         "success" => false,
@@ -19,9 +18,7 @@ $sql = "
     ORDER BY id DESC
     LIMIT 1
 ";
-
 $stmt = mysqli_prepare($conn, $sql);
-
 if (!$stmt) {
     echo json_encode([
         "success" => false,
@@ -29,23 +26,18 @@ if (!$stmt) {
     ]);
     exit();
 }
-
 mysqli_stmt_bind_param(
     $stmt,
     "i",
     $userId
 );
-
 mysqli_stmt_execute($stmt);
-
 mysqli_stmt_bind_result(
     $stmt,
     $conversationId
 );
-
 $found = mysqli_stmt_fetch($stmt);
 mysqli_stmt_close($stmt);
-
 if ($found) {
     echo json_encode([
         "success" => true,
@@ -53,7 +45,6 @@ if ($found) {
     ]);
     exit();
 }
-
 $sql = "
     INSERT INTO chat_conversations
     (
@@ -66,17 +57,14 @@ $sql = "
         'Open'
     )
 ";
-
 $stmt = mysqli_prepare($conn, $sql);
 if (!$stmt) {
     echo json_encode([
         "success" => false,
         "message" => "Could not create conversation."
     ]);
-
     exit();
 }
-
 mysqli_stmt_bind_param(
     $stmt,
     "i",

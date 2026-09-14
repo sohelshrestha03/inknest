@@ -6,25 +6,20 @@ document.addEventListener("DOMContentLoaded", function () {
     const chatInput = document.getElementById("inknestChatInput");
     const chatSend = document.getElementById("inknestChatSend");
     const chatBadge = document.getElementById("inknestChatBadge");
-
     if (!chatButton || !chatBox) {
         return;
     }
-
     let conversationId = null;
     let messageTimer = null;
-
     chatButton.addEventListener("click", function () {
         chatBox.classList.add("active");
         initializeChat();
     });
-
     if (chatClose) {
         chatClose.addEventListener("click", function () {
             chatBox.classList.remove("active");
         });
     }
-
     async function initializeChat() {
         try {
             const response = await fetch(
@@ -51,7 +46,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     }
-
     async function loadMessages() {
         if (!conversationId) {
             return;
@@ -73,8 +67,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         }
     }
-
-
     function renderMessages(messages) {
         if (!chatMessages) {
             return;
@@ -87,8 +79,6 @@ document.addEventListener("DOMContentLoaded", function () {
             chatMessages.appendChild(empty);
             return;
         }
-
-
         messages.forEach(function (item) {
             const wrapper=document.createElement("div");
             wrapper.className="inknest-chat-message " +
@@ -110,7 +100,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         chatMessages.scrollTop=chatMessages.scrollHeight;
     }
-
     async function sendMessage() {
         if (!conversationId) {
             await initializeChat();
@@ -121,7 +110,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
         chatSend.disabled = true;
-
         try {
             const formData =new FormData();
             formData.append(
@@ -132,7 +120,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 "message",
                 message
             );
-
             const response=await fetch(
                     "chat/send_message.php",
                     {
@@ -142,7 +129,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
             const data =await response.json();
-
             if (!data.success) {
                 alert(
                     data.message ||
@@ -154,23 +140,18 @@ document.addEventListener("DOMContentLoaded", function () {
             await loadMessages();
         } catch (error) {
             console.error(error);
-            alert(
-                "Unable to send message."
-            );
+            alert("Unable to send message.");
         } finally {
             chatSend.disabled = false;
             chatInput.focus();
         }
     }
-
     if (chatSend) {
         chatSend.addEventListener(
             "click",
             sendMessage
         );
-
     }
-
     if (chatInput) {
         chatInput.addEventListener(
             "keydown",
@@ -181,9 +162,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
         );
-
     }
-
     function startPolling() {
         if (messageTimer) {
             clearInterval(messageTimer);
@@ -200,8 +179,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 3000
             );
     }
-
-
     async function markMessagesRead() {
         if (!conversationId) {
             return;
@@ -224,24 +201,19 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error(error);
         }
     }
-
     async function updateUnreadCount() {
         try {
-            const response =
-                await fetch(
+            const response=await fetch(
                     "chat/unread_count.php?t=" +
                     Date.now()
                 );
-            const data =
-                await response.json();
-
+            const data=await response.json();
             if (!data.success || data.count <= 0) {
                 if (chatBadge) {
                     chatBadge.style.display="none";
                 }
                 return;
             }
-
             if (chatBadge) {
                 chatBadge.textContent =data.count > 99
                         ? "99+"
@@ -252,7 +224,6 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error(error);
         }
     }
-
     function showSystemMessage(message) {
         if (!chatMessages) {
             return;
@@ -263,16 +234,11 @@ document.addEventListener("DOMContentLoaded", function () {
         element.textContent =message;
         chatMessages.appendChild(element);
     }
-
     function formatTime(dateString) {
-        const date =new Date(
-                dateString.replace(" ", "T")
-            );
-
+        const date =new Date(dateString.replace(" ", "T"));
         if (isNaN(date.getTime())) {
             return "";
         }
-
         return date.toLocaleTimeString(
             [],
             {
@@ -286,5 +252,4 @@ document.addEventListener("DOMContentLoaded", function () {
         updateUnreadCount,
         5000
     );
-
 });

@@ -1,15 +1,11 @@
 <?php
 session_start();
-
 include "config/database.php";
-
 $error = "";
 $accountDeleted = isset($_GET["account_deleted"]) && $_GET["account_deleted"] === "1";
-
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $login = trim($_POST["login"]);
     $password = $_POST["password"];
-
     if (empty($login) || empty($password)) {
         $error = "Please enter username/phone and password.";
     } else {
@@ -19,7 +15,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
              FROM users
              WHERE user_name = ? OR phone_no = ?"
         );
-
         mysqli_stmt_bind_param(
             $sql,
             "ss",
@@ -28,7 +23,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         );
         mysqli_stmt_execute($sql);
         $result = mysqli_stmt_get_result($sql);
-
         if (mysqli_num_rows($result) === 1) {
             $user = mysqli_fetch_assoc($result);
             if (password_verify($password, $user["new_password"])) {
@@ -36,13 +30,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION["username"] = $user["user_name"];
                 $_SESSION["first_name"] = $user["first_name"];
                 $_SESSION["last_name"] = $user["last_name"];
-
                 $activitySql=mysqli_prepare($conn,
                 "INSERT INTO user_product_activity(
                 user_id,product_id,activity_type,created_at)
                 VALUES(?,NULL,'Logged In',NOW())"
                 );
-
                 if($activitySql){
                     mysqli_stmt_bind_param(
                         $activitySql,
@@ -65,7 +57,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,25 +66,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="css/login.css?v=<?php echo time(); ?>">
     <script src="js/login.js" defer></script>
 </head>
-
 <body>
 <nav class="navigation">
     <h1>Inknest</h1>
 </nav>
-
-
 <div class="login-container">
     <div class="login-card">
         <h2>Welcome Back</h2>
         <p class="subtitle">Login to your account</p>
-
-
         <?php if (!empty($error)): ?>
             <div class="error-box">
                 <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
-
             <?php if ($accountDeleted): ?>
                 <div class="success-box">
                   Your account has been permanently deleted.
@@ -104,16 +89,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <label for="login">Username or Phone Number</label>
                 <input type="text" id="login" name="login" placeholder="Enter username or phone" autocomplete="off" required>
             </div>
-
             <div class="data">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Enter your password" required>
             </div>
-
             <div class="forgot">
                 <a href="forgot_password.php">Forgot password?</a>
             </div>
-
             <div class="buttons">
                 <button type="submit">Login</button>
             </div>
@@ -121,6 +103,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </div>
 </div>
-
 </body>
 </html>

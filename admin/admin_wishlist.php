@@ -1,12 +1,10 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 $adminUsername = $_SESSION["admin_username"] ?? "Admin";
 $wishlistQuery = mysqli_query(
     $conn,
@@ -28,7 +26,6 @@ $wishlistQuery = mysqli_query(
      ORDER BY w.created_at DESC"
 );
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,7 +34,6 @@ $wishlistQuery = mysqli_query(
     <title>Customer Wishlist | Inknest</title>
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
     <style>
-
         .wishlist-container {
             margin-top: 30px;
             background: #fff;
@@ -45,13 +41,11 @@ $wishlistQuery = mysqli_query(
             border-radius: 10px;
             overflow-x: auto;
         }
-
         .wishlist-table {
             width: 100%;
             border-collapse: collapse;
             min-width: 850px;
         }
-
         .wishlist-table th,
         .wishlist-table td {
             padding: 15px;
@@ -59,22 +53,18 @@ $wishlistQuery = mysqli_query(
             text-align: left;
             vertical-align: middle;
         }
-
         .wishlist-table th {
             background: #f7f7f7;
             font-weight: 600;
         }
-
         .wishlist-table tr:last-child td {
             border-bottom: none;
         }
-
         .wishlist-product {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-
         .wishlist-product img {
             width: 55px;
             height: 55px;
@@ -82,7 +72,6 @@ $wishlistQuery = mysqli_query(
             border-radius: 6px;
             border: 1px solid #eee;
         }
-
         .no-image {
             width: 55px;
             height: 55px;
@@ -94,7 +83,6 @@ $wishlistQuery = mysqli_query(
             font-size: 11px;
             color: #777;
         }
-
         .no-wishlist {
             padding: 30px;
             text-align: center;
@@ -134,7 +122,6 @@ $wishlistQuery = mysqli_query(
         </a>
     </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>

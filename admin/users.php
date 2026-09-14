@@ -1,12 +1,10 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 if (isset($_GET["delete"])) {
     $userId = (int) $_GET["delete"];
     if ($userId > 0) {
@@ -25,11 +23,9 @@ if (isset($_GET["delete"])) {
     header("Location: users.php");
     exit();
 }
-
 $sql = "SELECT id, first_name, last_name, user_name, email, phone_no FROM users";
 $users = mysqli_query($conn, $sql);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,7 +35,6 @@ $users = mysqli_query($conn, $sql);
     <link rel="stylesheet" href="../css/users.css?v=<?php echo time(); ?>">
     <script src="../js/users.js" defer></script>
 </head>
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
@@ -57,21 +52,19 @@ $users = mysqli_query($conn, $sql);
         <a href="bill.php">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
-         <a href="chat.php">
+        <a href="chat.php">
                 Chat
                 <span
                     id="adminChatBadge"
                     class="admin-chat-badge">
                     0
                 </span>
-            </a>
+        </a>
     </nav>
-
     <div class="sidebar-bottom">
         <a href="admin_logout.php">Logout</a>
     </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>
@@ -79,7 +72,6 @@ $users = mysqli_query($conn, $sql);
             <p>Manage registered customers.</p>
         </div>
     </header>
-
     <section class="user-container">
         <?php if ($users && mysqli_num_rows($users) > 0): ?>
             <table>
@@ -93,8 +85,6 @@ $users = mysqli_query($conn, $sql);
                         <th>Action</th>
                     </tr>
                 </thead>
-
-
                 <tbody>
                 <?php while ($user = mysqli_fetch_assoc($users)): ?>
                     <tr>
@@ -115,8 +105,7 @@ $users = mysqli_query($conn, $sql);
                 <?php endwhile; ?>
                 </tbody>
             </table>
-
-        <?php else: ?>
+         <?php else: ?>
             <div class="empty">
                 <h3>No Users Found</h3>
                 <p>There are currently no registered users.</p>

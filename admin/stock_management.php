@@ -48,7 +48,6 @@ if ($statsQuery) {
     $lowStockProducts=(int)($stats["low_stock"] ?? 0);
     $outOfStockProducts=(int)($stats["out_of_stock"] ?? 0);
 }
-
 if ($search !== "") {
     $searchValue = "%" . $search . "%";
     $productQuery = mysqli_prepare(
@@ -68,7 +67,6 @@ if ($search !== "") {
         "s",
         $searchValue
     );
-
     mysqli_stmt_execute($productQuery);
     $productsResult=mysqli_stmt_get_result($productQuery);
 } else {
@@ -85,8 +83,6 @@ if ($search !== "") {
     );
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,13 +91,10 @@ if ($search !== "") {
     <title>Stock Management | Inknest</title>
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
 </head>
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
-    <p class="admin-label">
-        ADMIN PANEL
-    </p>
+    <p class="admin-label">ADMIN PANEL</p>
     <nav>
         <a href="admin_dashboard.php">Dashboard</a>
         <a href="products.php">Products</a>
@@ -115,147 +108,63 @@ if ($search !== "") {
         <a href="bill.php">Bills</a>
         <a href="stock_management.php" class="active">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
-         <a href="chat.php">
+        <a href="chat.php">
                 Chat
                 <span
                     id="adminChatBadge"
                     class="admin-chat-badge">
                     0
                 </span>
-            </a>
+        </a>
     </nav>
-
     <div class="sidebar-bottom">
         <a href="admin_logout.php">Logout</a>
     </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>
-            <h2>
-                Stock Management
-            </h2>
-            <p>
-                Welcome back,
+            <h2>Stock Management</h2>
+            <p>Welcome back,
                 <?php
                 echo htmlspecialchars($adminUsername);
                 ?>
             </p>
         </div>
     </header>
-
     <section class="stats">
         <div class="stat-card">
-            <span>
-                Total Products
-            </span>
-            <strong>
-                <?php
-                echo $totalProducts;
-                ?>
-            </strong>
-        </div>
-
-        <div class="stat-card">
-            <span>
-                Total Stock Units
-            </span>
-            <strong>
-                <?php
-                echo $totalStock;
-                ?>
-            </strong>
+            <span>Total Products</span>
+            <strong><?php echo $totalProducts;?></strong>
         </div>
         <div class="stat-card">
-            <span>
-                Low Stock
-            </span>
-            <strong>
-                <?php
-                echo $lowStockProducts;
-                ?>
-            </strong>
+            <span>Total Stock Units</span>
+            <strong><?php echo $totalStock;?></strong>
         </div>
         <div class="stat-card">
-            <span>
-                Out of Stock
-            </span>
-            <strong>
-                <?php
-                echo $outOfStockProducts;
-                ?>
-            </strong>
+            <span>Low Stock</span>
+            <strong><?php echo $lowStockProducts;?></strong>
         </div>
-
+        <div class="stat-card">
+            <span>Out of Stock</span>
+            <strong><?php echo $outOfStockProducts;?></strong>
+        </div>
     </section>
     <section class="section">
-        <h3>
-            Manage Product Stock
-        </h3>
-        <form method="GET"
-            style="display:flex;
-                gap:10px;
-                margin:20px 0;
-                flex-wrap:wrap;">
-            <input type="text"
-                name="search"
-                placeholder="Search product..."
-                value="<?php
-                    echo htmlspecialchars($search);
-                ?>"
-                style="
-                    flex:1;
-                    min-width:220px;
-                    padding:11px 14px;
-                    border:1px solid #ddd;
-                    border-radius:6px;
-                    font-size:14px;
-                ">
-            <button type="submit"
-                style="border:none;
-                    padding:11px 20px;
-                    border-radius:6px;
-                    cursor:pointer;
-                    font-weight:bold;">
-                Search
-            </button>
+        <h3>Manage Product Stock</h3>
+        <form method="GET" style="display:flex;gap:10px;margin:20px 0;flex-wrap:wrap;">
+            <input type="text" name="search" placeholder="Search product..." value="<?php echo htmlspecialchars($search); ?>"
+                style="flex:1;min-width:220px;padding:11px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
+            <button type="submit" style="border:none;padding:11px 20px;border-radius:6px;cursor:pointer;font-weight:bold;">Search</button>
             <?php if ($search !== ""): ?>
-                <a href="stock_management.php"
-                    style="
-                        text-decoration:none;
-                        padding:11px 18px;
-                        border-radius:6px;
-                        background:#eee;
-                        color:#333;
-                        font-size:14px;
-                    ">
-                    Clear
-                </a>
+                <a href="stock_management.php" style="text-decoration:none;padding:11px 18px;border-radius:6px;background:#eee;
+                        color:#333;font-size:14px;">Clear</a>
             <?php endif; ?>
         </form>
-        <div id="message" style="
-                display:none;
-                padding:12px 15px;
-                margin-bottom:15px;
-                border-radius:6px;
-                font-size:14px;
-            "></div>
-        <div style="
-                overflow-x:auto;
-                width:100%;
-            ">
-            <?php if (
-                $productsResult &&
-                mysqli_num_rows($productsResult) > 0
-            ): ?>
-                <table
-                    style="
-                        width:100%;
-                        border-collapse:collapse;
-                        min-width:850px;
-                    "
-                >
+        <div id="message" style="display:none;padding:12px 15px;margin-bottom:15px;border-radius:6px;font-size:14px;"></div>
+        <div style="overflow-x:auto;width:100%;">
+            <?php if ($productsResult && mysqli_num_rows($productsResult) > 0): ?>
+                <table style=" width:100%; border-collapse:collapse; min-width:850px;">
                     <thead>
                         <tr>
                             <th
@@ -538,7 +447,6 @@ if ($search !== "") {
                                         ">
                                         − Reduce
                                     </button>
-
                                     <button type="button"
                                         onclick="openStockModal(
                                             <?php
@@ -579,7 +487,6 @@ if ($search !== "") {
                     </tbody>
                 </table>
             <?php else: ?>
-
                 <div
                     style="
                         text-align:center;
@@ -601,7 +508,6 @@ if ($search !== "") {
         </div>
     </section>
 </main>
-
 <div
     id="stockModal"
     style="
@@ -614,7 +520,6 @@ if ($search !== "") {
         justify-content:center;
         padding:20px;
     ">
-
     <div
         style="
             background:white;
@@ -636,7 +541,6 @@ if ($search !== "") {
             ">
             Product
         </p>
-
         <form id="stockForm">
             <input type="hidden"
                 id="productId"
@@ -700,7 +604,6 @@ if ($search !== "") {
         </form>
     </div>
 </div>
-
 <script>
 const lowStockLimit=<?php echo $lowStockLimit; ?>;
 function openStockModal(
@@ -744,16 +647,13 @@ function openStockModal(
         quantity.select();
     }, 100);
 }
-
 function closeStockModal() {
     document.getElementById(
         "stockModal"
     ).style.display = "none";
 
 }
-
-document
-    .getElementById("stockModal")
+document.getElementById("stockModal")
     .addEventListener(
         "click",
         function(event) {
@@ -762,24 +662,15 @@ document
             }
         }
     );
-
-document
-    .getElementById("stockForm")
+document.getElementById("stockForm")
     .addEventListener(
         "submit",
         function(event) {
             event.preventDefault();
-            const formData =new FormData(this);
-            const productId =
-                document.getElementById(
-                    "productId"
-                ).value;
-            const action =
-                document.getElementById(
-                    "stockAction"
-                ).value;
-            const quantity =
-                parseInt(
+            const formData=new FormData(this);
+            const productId=document.getElementById("productId").value;
+            const action=document.getElementById("stockAction").value;
+            const quantity =parseInt(
                     document.getElementById(
                         "stockQuantity"
                     ).value,
@@ -792,19 +683,14 @@ document
                 );
                 return;
             }
-            if ((action === "add" ||
-                 action === "reduce") &&
-                quantity < 1) {
+            if ((action === "add" || action === "reduce") && quantity < 1) {
                 showMessage(
                     "Quantity must be at least 1.",
                     false
                 );
                 return;
             }
-            const saveButton =
-                document.getElementById(
-                    "saveStockButton"
-                );
+            const saveButton =document.getElementById("saveStockButton");
             saveButton.disabled=true;
             saveButton.textContent="Saving...";
             fetch(
@@ -856,18 +742,10 @@ function updateProductStock(
     productId,
     stock
 ) {
-    const stockElement =
-        document.getElementById(
+    const stockElement=document.getElementById(
             "stock-" + productId
         );
-
-    const statusElement =
-        document.getElementById(
-            "status-" + productId
-        );
-
-    const row =
-        document.querySelector(
+    const row =document.querySelector(
             'tr[data-product-id="' +
             productId +
             '"]'
@@ -877,9 +755,7 @@ function updateProductStock(
     if (stock <= 0) {
         status="Out of Stock";
         statusColor="#dc2626";
-    } else if (
-        stock <= lowStockLimit
-    ) {
+    } else if (stock <= lowStockLimit) {
         status="Low Stock";
         statusColor="#d97706";
     } else {
@@ -899,13 +775,11 @@ function updateProductStock(
     }
 
 }
-
 function showMessage(
     text,
     success
 ) {
-    const message =
-        document.getElementById(
+    const message = document.getElementById(
             "message"
         );
     message.textContent=text;

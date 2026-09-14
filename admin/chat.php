@@ -1,16 +1,13 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 $adminId=(int) $_SESSION["admin_id"];
 $adminUsername=$_SESSION["admin_username"] ?? "Admin";
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,8 +18,6 @@ $adminUsername=$_SESSION["admin_username"] ?? "Admin";
     <link rel="stylesheet" href="../css/admin_chat.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin_footer.css?v=<?php echo time(); ?>">
 </head>
-
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
@@ -47,27 +42,16 @@ $adminUsername=$_SESSION["admin_username"] ?? "Admin";
             </span>
         </a>
     </nav>
-
      <div class="sidebar-bottom">
-
-            <a href="admin_logout.php">
-                Logout
-            </a>
-
+            <a href="admin_logout.php">Logout</a>
         </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>
-            <h2>
-                Customer Chat
-            </h2>
-            <p>
-                Respond to customer messages
-            </p>
+            <h2>Customer Chat</h2>
+            <p>Respond to customer messages</p>
         </div>
-
         <div>
             <?php
             echo htmlspecialchars(
@@ -78,58 +62,40 @@ $adminUsername=$_SESSION["admin_username"] ?? "Admin";
             ?>
         </div>
     </header>
-
     <section class="admin-chat-layout">
         <div class="admin-chat-conversations">
             <div class="admin-chat-list-header">
-                <h3>
-                    Conversations
-                </h3>
+                <h3>Conversations</h3>
             </div>
-
             <div id="adminConversationList" class="admin-conversation-list">
                 <div class="admin-chat-loading">
                     Loading conversations...
                 </div>
             </div>
         </div>
-
         <div class="admin-chat-panel">
             <div id="adminChatHeader" class="admin-chat-panel-header">
                 <div class="admin-chat-user">
                     <div id="adminChatAvatar" class="admin-chat-avatar">
                         👤
                     </div>
-
                     <div class="admin-chat-user-info">
-                        <strong id="adminChatUserName">
-                            Select a conversation
-                        </strong>
-                        <span id="adminChatUserEmail">
-                            Choose a customer to start chatting.
-                        </span>
-                    </div>=
+                        <strong id="adminChatUserName">Select a conversation</strong>
+                        <span id="adminChatUserEmail">Choose a customer to start chatting.</span>
+                    </div>
                 </div>
             </div>
-
             <div id="adminChatMessages" class="admin-chat-panel-messages">
-                <div class="admin-chat-empty">
-                    Select a conversation.
-                </div>
+                <div class="admin-chat-empty">Select a conversation.</div>
             </div>
-
             <div class="admin-chat-input-area">
                 <input type="text" id="adminChatInput" placeholder="Type your reply..." maxlength="2000" autocomplete="off" disabled>
-                <button type="button" id="adminChatSend" disabled>
-                    ➤
-                </button>
+                <button type="button" id="adminChatSend" disabled>➤</button>
             </div>
         </div>
     </section>
 </main>
-<script>
-const ADMIN_ID =<?php echo $adminId; ?>;
-</script>
+<script>const ADMIN_ID =<?php echo $adminId; ?>;</script>
 <script src="../js/admin_chat.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

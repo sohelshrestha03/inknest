@@ -1,12 +1,10 @@
 <?php
 session_start();
 require_once "config/database.php";
-
 if (!isset($_SESSION["reset_user_id"]) || !isset($_SESSION["reset_email"])) {
     header("Location: forgot_password.php");
     exit();
 }
-
 $userId = (int) $_SESSION["reset_user_id"];
 $email = strtolower(
     trim(
@@ -25,7 +23,6 @@ $otpVerified =isset($_SESSION["otp_verified"]) &&
             $_SESSION["otp_verified_email"] ?? ""
         )
     ) === $email;
-
 function redirectWithAlert(
     string $message,
     string $location
@@ -38,7 +35,6 @@ function redirectWithAlert(
     ";
     exit();
 }
-
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["send_otp"])) {
     $newPassword=$_POST["new_password"] ?? "";
     $confirmPassword=$_POST["confirm_password"] ?? "";
@@ -63,11 +59,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["send_otp"])) {
         $otpStep = true;
     }
 }
-
 if (isset($_GET["otp"]) && $_GET["otp"] === "1") {
     $otpStep = true;
 }
-
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["complete_reset"])) {
     $otpVerified =isset($_SESSION["otp_verified"]) &&
         $_SESSION["otp_verified"] === true &&
@@ -79,7 +73,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["complete_reset"])) {
                 $_SESSION["otp_verified_email"] ?? ""
             )
         ) === $email;
-
     if (!$otpVerified) {
         redirectWithAlert(
             "Please verify the OTP first.",
@@ -103,7 +96,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["complete_reset"])) {
         WHERE id = ?
         "
     );
-
     if (!$stmt) {
         redirectWithAlert(
             "Something went wrong. Please try again.",
@@ -117,7 +109,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["complete_reset"])) {
         $passwordHash,
         $userId
     );
-
     if (!mysqli_stmt_execute($stmt)) {
         mysqli_stmt_close($stmt);
         redirectWithAlert(
@@ -143,28 +134,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["complete_reset"])) {
     );
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        Reset Password | Inknest
-    </title>
+    <title>Reset Password | Inknest</title>
     <link rel="stylesheet" href="css/reset_password.css?v=<?php echo time(); ?>">
 </head>
-
 <body>
 <nav class="navigation">
-    <h1>
-        Inknest
-    </h1>
-    <a href="login.php">
-        Back
-    </a>
+    <h1>Inknest</h1>
+    <a href="login.php">Back</a>
 </nav>
-
 <div class="reset-container">
     <div class="reset-card">
         <h2>Reset Password</h2>
@@ -185,25 +167,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["complete_reset"])) {
                 <label for="new_password">New Password</label>
                 <input type="password" id="new_password" name="new_password" placeholder="Enter new password" minlength="8" required>
             </div>
-
             <div class="data">
                 <label for="confirm_password">Confirm Password</label>
                 <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" minlength="8" required>
             </div>
-
             <?php if (!$otpStep): ?>
                 <button type="submit" name="send_otp" value="1" id="sendOtpButton">Send OTP</button>
             <?php endif; ?>
         </form>
-
         <?php if ($otpStep && !$otpVerified): ?>
-            <div
-                id="otpSection"
+            <div id="otpSection"
                 style="
                     margin-top:20px;
                     padding-top:20px;
-                    border-top:1px solid #eeeeee;
-                ">
+                    border-top:1px solid #eeeeee;">
                 <div class="data">
                     <label for="otp">Verification Code</label>
                     <input type="text" id="otp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="Enter 6-digit OTP">
@@ -251,7 +228,6 @@ document.addEventListener("DOMContentLoaded",function () {
                     ? "#c62828"
                     : "#555555";
         }
-
         async function sendOtp() {
             if (!email) {
                 showMessage(
@@ -260,7 +236,6 @@ document.addEventListener("DOMContentLoaded",function () {
                 );
                 return;
             }
-
             if (resendOtpButton) {
                 resendOtpButton.disabled =true;
             }
@@ -331,7 +306,6 @@ document.addEventListener("DOMContentLoaded",function () {
                 }
             }
         }
-
         if (verifyOtpButton) {
             verifyOtpButton.addEventListener(
                 "click",
@@ -361,7 +335,6 @@ document.addEventListener("DOMContentLoaded",function () {
                         "purpose",
                         purpose
                     );
-
                     try {
                         const response = await fetch(
                                 "auth/verify_otp.php",
@@ -383,7 +356,6 @@ document.addEventListener("DOMContentLoaded",function () {
                                 "Server returned an invalid response."
                             );
                         }
-
                         if (!data.success) {
                             throw new Error(
                                 data.message ||
@@ -425,7 +397,6 @@ document.addEventListener("DOMContentLoaded",function () {
                 }
             );
         }
-
         if (resendOtpButton) {
             resendOtpButton.addEventListener(
                 "click",

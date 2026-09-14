@@ -2,7 +2,6 @@
 session_start();
 include "../config/database.php";
 header("Content-Type: application/json; charset=UTF-8");
-
 if (!isset($_SESSION["admin_id"])) {
     echo json_encode([
         "success" => false,
@@ -10,7 +9,6 @@ if (!isset($_SESSION["admin_id"])) {
     ]);
     exit();
 }
-
 $sql = "
     SELECT
         cc.id,
@@ -53,14 +51,10 @@ $sql = "
     ORDER BY cc.updated_at DESC
 
 ";
-
-
-$result =
-    mysqli_query(
+$result =mysqli_query(
         $conn,
         $sql
     );
-
 if (!$result) {
     echo json_encode([
         "success" => false,
@@ -68,24 +62,19 @@ if (!$result) {
             "Database error: " .
             mysqli_error($conn)
     ]);
-
     exit();
 }
-
 $conversations = [];
-
 while ($row = mysqli_fetch_assoc($result)) {
     $firstName =trim($row["first_name"] ?? "");
     $lastName =trim($row["last_name"] ?? "");
     $name =trim($firstName ." " .$lastName);
-
     if ($name === "") {
         $name =trim($row["user_name"] ?? "");
     }
     if ($name === "") {
         $name = "Customer";
     }
-
     $profilePicture =trim($row["profile_picture"] ?? "");
     $lastMessage = trim($row["last_message"] ?? "");
     $lastMessageTime = $row["last_message_time"] ?? "";
@@ -103,7 +92,6 @@ while ($row = mysqli_fetch_assoc($result)) {
         "unread_count" =>$unreadCount
     ];
 }
-
 echo json_encode(
     [
         "success" =>true,

@@ -5,7 +5,6 @@ if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_order"])) {
     $orderId = (int) $_POST["order_id"];
     if ($orderId > 0) {
@@ -24,7 +23,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_order"])) {
     header("Location: orders.php");
     exit();
 }
-
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_order_status"])) {
     $orderId = (int) $_POST["order_id"];
     $status = trim($_POST["status"]);
@@ -52,7 +50,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_order_status"]
     header("Location: orders.php");
     exit();
 }
-
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_payment_status"])) {
     $orderId = (int) $_POST["order_id"];
     $paymentStatus = trim($_POST["payment_status"]);
@@ -62,7 +59,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_payment_status
         "Failed",
         "Refunded"
     ];
-
     if ($orderId > 0 && in_array($paymentStatus, $allowedPaymentStatuses, true)) {
         $stmt = mysqli_prepare(
             $conn,
@@ -80,7 +76,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_payment_status
     header("Location: orders.php");
     exit();
 }
-
 $sql = "SELECT
         orders.id,
         orders.total_amount,
@@ -98,7 +93,6 @@ $sql = "SELECT
     FROM orders INNER JOIN users ON orders.user_id = users.id ORDER BY orders.id DESC";
 $orders = mysqli_query($conn, $sql);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -108,7 +102,6 @@ $orders = mysqli_query($conn, $sql);
     <link rel="stylesheet" href="../css/orders.css?v=<?php echo time(); ?>">
     <script src="../js/orders.js?v=<?php echo time(); ?>" defer></script>
 </head>
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
@@ -135,12 +128,10 @@ $orders = mysqli_query($conn, $sql);
                 </span>
             </a>
     </nav>
-
     <div class="sidebar-bottom">
         <a href="admin_logout.php">Logout</a>
     </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>
@@ -148,7 +139,6 @@ $orders = mysqli_query($conn, $sql);
             <p>Manage customer orders and payments.</p>
         </div>
     </header>
-
     <section class="order-container">
     <?php if ($orders && mysqli_num_rows($orders) > 0): ?>
         <div class="table-wrapper">
@@ -179,7 +169,6 @@ $orders = mysqli_query($conn, $sql);
                         <td>
                             #<?php echo (int) $order["id"]; ?>
                         </td>
-
                         <td>
                             <?php
                             echo htmlspecialchars(
@@ -191,7 +180,6 @@ $orders = mysqli_query($conn, $sql);
                             );
                             ?>
                         </td>
-
                         <td>
                             <?php
                             echo htmlspecialchars(
@@ -199,7 +187,6 @@ $orders = mysqli_query($conn, $sql);
                             );
                             ?>
                         </td>
-
                         <td>
                             Rs.
                             <?php
@@ -209,7 +196,6 @@ $orders = mysqli_query($conn, $sql);
                             );
                             ?>
                         </td>
-
                         <td>
                             <span class="status <?php echo strtolower($order["status"]); ?>">
                                 <?php
@@ -219,7 +205,6 @@ $orders = mysqli_query($conn, $sql);
                                 ?>
                             </span>
                         </td>
-
                         <td>
                             <?php
                             echo date(
@@ -228,7 +213,6 @@ $orders = mysqli_query($conn, $sql);
                             );
                             ?>
                         </td>
-
                         <td class="actions">
                             <form method="POST" action="orders.php">
                                 <input type="hidden" name="order_id" value="<?php echo (int) $order["id"]; ?>">
@@ -242,7 +226,6 @@ $orders = mysqli_query($conn, $sql);
                                         ?>>
                                         Pending
                                     </option>
-
                                     <option
                                         value="Processing"
                                         <?php
@@ -252,7 +235,6 @@ $orders = mysqli_query($conn, $sql);
                                         ?>>
                                         Processing
                                     </option>
-
                                     <option
                                         value="Shipped"
                                         <?php
@@ -262,7 +244,6 @@ $orders = mysqli_query($conn, $sql);
                                         ?>>
                                         Shipped
                                     </option>
-
                                     <option
                                         value="Delivered"
                                         <?php
@@ -272,7 +253,6 @@ $orders = mysqli_query($conn, $sql);
                                         ?>>
                                         Delivered
                                     </option>
-
                                     <option
                                         value="Cancelled"
                                         <?php
@@ -283,13 +263,9 @@ $orders = mysqli_query($conn, $sql);
                                         Cancelled
                                     </option>
                                 </select>
-
-                                <button type="submit" name="update_order_status">
-                                    Update
-                                </button>
+                                <button type="submit" name="update_order_status">Update</button>
                             </form>
                         </td>
-
                         <td>
                             <?php
                             echo htmlspecialchars(
@@ -297,7 +273,6 @@ $orders = mysqli_query($conn, $sql);
                             );
                             ?>
                         </td>
-
                         <td>
                             <?php
                             echo htmlspecialchars(
@@ -305,7 +280,6 @@ $orders = mysqli_query($conn, $sql);
                             );
                             ?>
                         </td>
-
                         <td>
                             <?php
                             echo htmlspecialchars(
@@ -313,7 +287,6 @@ $orders = mysqli_query($conn, $sql);
                             );
                             ?>
                         </td>
-
                         <td>
                             <?php if (!empty($order["payment_method"])): ?>
                                 <?php
@@ -327,7 +300,6 @@ $orders = mysqli_query($conn, $sql);
                                 N/A
                             <?php endif; ?>
                         </td>
-
                         <td>
                             <span class="payment-status <?php echo strtolower($order["payment_status"]); ?>">
                                 <?php
@@ -337,7 +309,6 @@ $orders = mysqli_query($conn, $sql);
                                 ?>
                             </span>
                         </td>
-
                         <td>
                             <form method="POST" action="orders.php" class="payment-form">
                                 <input type="hidden" name="order_id" value="<?php echo (int) $order["id"]; ?>">
@@ -350,7 +321,6 @@ $orders = mysqli_query($conn, $sql);
                                         ?>>
                                         Pending
                                     </option>
-
                                     <option value="Paid"
                                         <?php
                                         echo $order["payment_status"] === "Paid"
@@ -359,7 +329,6 @@ $orders = mysqli_query($conn, $sql);
                                         ?>>
                                         Paid
                                     </option>
-
                                     <option value="Failed"
                                         <?php
                                         echo $order["payment_status"] === "Failed"
@@ -368,7 +337,6 @@ $orders = mysqli_query($conn, $sql);
                                         ?>>
                                         Failed
                                     </option>
-
                                     <option value="Refunded"
                                         <?php
                                         echo $order["payment_status"] === "Refunded"
@@ -378,15 +346,10 @@ $orders = mysqli_query($conn, $sql);
                                         Refunded
                                     </option>
                                 </select>
-
-                                <button type="submit" name="update_payment_status">
-                                    Update
-                                </button>
+                                <button type="submit" name="update_payment_status">Update</button>
                             </form>
                         </td>
-
-                        <td>
-                            <?php if (!empty($order["transaction_id"])): ?>
+                        <td><?php if (!empty($order["transaction_id"])): ?>
                                 <span class="transaction-id">
                                     <?php
                                     echo htmlspecialchars(
@@ -400,14 +363,12 @@ $orders = mysqli_query($conn, $sql);
                                 </span>
                             <?php endif; ?>
                         </td>
-
                         <td>
                             <form method="POST" action="orders.php" class="delete-form">
                                 <input type="hidden" name="order_id" value="<?php echo (int) $order["id"]; ?>">
                                 <button type="submit" name="delete_order" class="delete-btn"
                                     onclick="return confirm('Are you sure you want to delete this order? This action cannot be undone.');">
-                                    Delete
-                                </button>
+                                    Delete</button>
                             </form>
                         </td>
                     </tr>
@@ -416,14 +377,9 @@ $orders = mysqli_query($conn, $sql);
             </table>
         </div>
     <?php else: ?>
-
         <div class="empty">
-            <h3>
-                No Orders Found
-            </h3>
-            <p>
-                There are currently no customer orders.
-            </p>
+            <h3>No Orders Found</h3>
+            <p>There are currently no customer orders.</p>
         </div>
     <?php endif; ?>
 </section>

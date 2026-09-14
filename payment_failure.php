@@ -1,19 +1,16 @@
 <?php
 session_start();
 include "config/database.php";
-
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
 }
-
 $userId = (int) $_SESSION["user_id"];
 $success = false;
 $error = "";
 $paymentMethod = "";
 $orderId = 0;
 $transactionId = null;
-
 if (isset($_GET["data"]) && !empty($_GET["data"])) {
     $paymentMethod = "esewa";
     $decodedData = base64_decode(
@@ -39,8 +36,6 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                 !empty($transactionCode)
                 ? $transactionCode
                 : $transactionUuid;
-
-
             if (empty($transactionUuid)) {
                 $error="eSewa transaction ID is missing.";
             } else {
@@ -50,12 +45,10 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                         AND payment_method = 'esewa'
                         AND transaction_id = ?
                         LIMIT 1";
-
                 $stmt = mysqli_prepare(
                     $conn,
                     $sql
                 );
-
                 if (!$stmt) {
                     $error="Unable to verify the order.";
                 } else {
@@ -67,7 +60,6 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                     );
                     mysqli_stmt_execute($stmt);
                     $result=mysqli_stmt_get_result($stmt);
-
                     if (mysqli_num_rows($result) !== 1) {
                         $error="eSewa order could not be found.";
                     } else {
@@ -84,7 +76,6 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                                 $conn,
                                 $sql
                             );
-
                         if (!$updateStmt) {
                             $error="Unable to update the order.";
                         } else {
@@ -94,13 +85,11 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                                 $orderId,
                                 $userId
                             );
-
                             if (mysqli_stmt_execute($updateStmt)) {
                                 $success = true;
                             } else {
                                 $error ="Payment failed, but the order status could not be updated.";
                             }
-
                             mysqli_stmt_close(
                                 $updateStmt
                             );
@@ -113,11 +102,7 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
             }
         }
     }
-} elseif (
-    isset($_GET["method"])
-    && $_GET["method"] === "cash"
-    && isset($_GET["order_id"])
-) {
+} elseif (isset($_GET["method"]) && $_GET["method"] === "cash" && isset($_GET["order_id"])) {
     $paymentMethod = "cash";
     $orderId =(int) $_GET["order_id"];
     $sql = "SELECT id, total_amount, payment_method
@@ -126,12 +111,10 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
             AND user_id = ?
             AND payment_method = 'cash'
             LIMIT 1";
-
     $stmt = mysqli_prepare(
         $conn,
         $sql
     );
-
     if (!$stmt) {
         $error="Unable to verify the order.";
     } else {
@@ -152,13 +135,11 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                     WHERE id = ?
                     AND user_id = ?
                     AND payment_method = 'cash'";
-
             $updateStmt =
                 mysqli_prepare(
                     $conn,
                     $sql
                 );
-
             if (!$updateStmt) {
                 $error ="Unable to update the order.";
             } else {
@@ -172,7 +153,6 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                     $success = true;
                 } else {
                     $error="Order was created, but payment status could not be updated.";
-
                 }
                 mysqli_stmt_close(
                     $updateStmt
@@ -187,31 +167,21 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
     $error="No valid payment information was received.";
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        Payment Failed | Inknest
-    </title>
+    <title>Payment Failed | Inknest</title>
     <link rel="stylesheet" href="css/payment_success.css?v=<?php echo time(); ?>">
 </head>
-
-
 <body>
 <div class="payment-container">
     <div class="icon error-icon">
         !
     </div>
-    <h1>
-        Payment Failed
-    </h1>
-    <p class="message">
-        We could not complete your payment.
-    </p>
-
+    <h1>Payment Failed</h1>
+    <p class="message">We could not complete your payment.</p>
     <?php if (!empty($error)): ?>
         <div class="error-message">
             <?php
@@ -221,13 +191,10 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
             ?>
         </div>
     <?php endif; ?>
-
     <?php if ($orderId > 0): ?>
         <div class="order-info">
             <div class="order-row">
-                <span>
-                    Order ID
-                </span>
+                <span>Order ID</span>
                 <strong>
                     #<?php
                     echo htmlspecialchars(
@@ -236,7 +203,6 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                     ?>
                 </strong>
             </div>
-
             <?php if (!empty($transactionId)): ?>
                 <div class="order-row">
                     <span>
@@ -251,7 +217,6 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                     </strong>
                 </div>
             <?php endif; ?>
-
             <div class="order-row">
                 <span>
                     Payment Status
@@ -262,14 +227,9 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
             </div>
         </div>
     <?php endif; ?>
-
     <div class="buttons">
-        <a href="checkout.php" class="button primary">
-            Back to Checkout
-        </a>
-        <a href="cart.php" class="button secondary">
-            Back to Cart
-        </a>
+        <a href="checkout.php" class="button primary">Back to Checkout</a>
+        <a href="cart.php" class="button secondary">Back to Cart</a>
     </div>
 </div>
 </body>

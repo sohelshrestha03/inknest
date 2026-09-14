@@ -1,7 +1,6 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
@@ -29,7 +28,6 @@ if (!$query) {
     die("Database error: " . mysqli_error($conn));
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,46 +41,37 @@ if (!$query) {
             border-collapse: collapse;
             margin-top: 20px;
         }
-
         .stock-history-table th,
         .stock-history-table td {
             padding: 14px 16px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
-
         .stock-history-table th {
             font-weight: 600;
         }
-
         .stock-history-table tr:hover {
             background: #fafafa;
         }
-
         .increase {
             color: #16803c;
             font-weight: 600;
         }
-
         .decrease {
             color: #d93025;
             font-weight: 600;
         }
-
         .quantity-increase {
             color: #16803c;
             font-weight: 700;
         }
-
         .quantity-decrease {
             color: #d93025;
             font-weight: 700;
         }
-
         .stock-number {
             font-weight: 600;
         }
-
         .empty-history {
             text-align: center;
             padding: 40px;
@@ -90,7 +79,6 @@ if (!$query) {
         }
     </style>
 </head>
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
@@ -117,22 +105,17 @@ if (!$query) {
                 </span>
             </a>
     </nav>
-
     <div class="sidebar-bottom">
         <a href="admin_logout.php">Logout</a>
     </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>
             <h2>Stock History</h2>
-            <p>
-                Track stock increases and decreases
-            </p>
+            <p>Track stock increases and decreases</p>
         </div>
     </header>
-
     <section class="section">
         <h3>Stock Increase & Decrease Records</h3>
         <div style="overflow-x:auto;">
@@ -185,20 +168,16 @@ if (!$query) {
                                     </span>
                                 <?php endif; ?>
                             </td>
-
                             <td>
                                 <span class="stock-number">
                                     <?php echo (int)$row["old_stock"]; ?>
                                 </span>
                             </td>
-
                             <td>
                                 <span class="stock-number">
                                     <?php echo (int)$row["new_stock"]; ?>
                                 </span>
-
                             </td>
-
                             <td>
                                 <?php
                                 echo date(
@@ -211,8 +190,7 @@ if (!$query) {
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="8"
-                            class="empty-history">
+                        <td colspan="8" class="empty-history">
                             No stock changes have been recorded yet.
                         </td>
                     </tr>

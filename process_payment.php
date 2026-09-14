@@ -1,61 +1,46 @@
 <?php
 session_start();
 include "config/database.php";
-
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
 }
-
 $userId = (int) $_SESSION["user_id"];
 $shippingCharge = 100;
 $esewaProductCode = "EPAYTEST";
 $esewaSecretKey = "8gBm/:&EnhH.1/q";
 $esewaUrl = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
 $baseUrl = "http://localhost/inknest";
-
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     header("Location: checkout.php");
     exit();
 }
-
 $paymentMethod = $_POST["payment_method"] ?? "";
 $allowedMethods = ["esewa","cash"];
-
 if (!in_array($paymentMethod, $allowedMethods, true)) {
     die("Invalid payment method.");
 }
-
 $email=trim($_POST["email"] ?? "");
 $phone=trim($_POST["phone"] ?? "");
 $deliveryAddress = trim($_POST["delivery_address"] ?? "");
-
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     die("Invalid email address.");
 }
-
 $phoneDigits = preg_replace("/\D/", "", $phone);
-
 if (strlen($phoneDigits) < 10) {
     die("Invalid phone number.");
 }
-
 if (strlen($deliveryAddress) < 5) {
     die("Invalid delivery address.");
 }
-
 $cartJson = $_POST["cart"] ?? "";
-
 if (empty($cartJson)) {
     die("Cart is empty.");
 }
-
 $cart = json_decode($cartJson, true);
-
 if (!is_array($cart) || empty($cart)) {
     die("Invalid cart data.");
 }
-
 $cleanCart = [];
 foreach ($cart as $id) {
     $id = (int) $id;
@@ -63,19 +48,15 @@ foreach ($cart as $id) {
         $cleanCart[] = $id;
     }
 }
-
 if (empty($cleanCart)) {
     die("Invalid products in cart.");
 }
-
 $productIds = array_values(
     array_unique($cleanCart)
 );
-
 if (empty($productIds)) {
     die("No products found in cart.");
 }
-
 $placeholders = implode(
     ",",
     array_fill(
@@ -84,7 +65,6 @@ $placeholders = implode(
         "?"
     )
 );
-
 $sql = "
     SELECT
         id,
@@ -99,31 +79,23 @@ $stmt = mysqli_prepare(
     $conn,
     $sql
 );
-
 if (!$stmt) {
     die("Product query failed: " .mysqli_error($conn));
 }
-
 $types = str_repeat(
     "i",
     count($productIds)
 );
-
 mysqli_stmt_bind_param(
     $stmt,
     $types,
     ...$productIds
 );
-
 if (!mysqli_stmt_execute($stmt)) {
     $error = mysqli_stmt_error($stmt);
     mysqli_stmt_close($stmt);
-    die(
-        "Product query failed: " .
-        $error
-    );
+    die("Product query failed: " .$error);
 }
-
 mysqli_stmt_bind_result(
     $stmt,
     $productId,
@@ -131,7 +103,6 @@ mysqli_stmt_bind_result(
     $productPrice,
     $productStock
 );
-
 $products = [];
 while (mysqli_stmt_fetch($stmt)) {
     $products[$productId] = [
@@ -141,15 +112,11 @@ while (mysqli_stmt_fetch($stmt)) {
         "stock" => $productStock
     ];
 }
-
 mysqli_stmt_close($stmt);
-
 if (empty($products)) {
     die("No valid products found.");
 }
-
 $cartQuantities = [];
-
 foreach ($cleanCart as $cartProductId) {
     $cartProductId = (int) $cartProductId;
     if (!isset($cartQuantities[$cartProductId])) {
@@ -157,7 +124,6 @@ foreach ($cleanCart as $cartProductId) {
     }
     $cartQuantities[$cartProductId]++;
 }
-
 $subtotal = 0;
 foreach ($cartQuantities as $cartProductId => $quantity) {
     if (!isset($products[$cartProductId])) {
@@ -185,13 +151,11 @@ foreach ($cartQuantities as $cartProductId => $quantity) {
     $price = (float) $product["price"];
     $subtotal += $price * $quantity;
 }
-
 if ($subtotal <= 0) {
     die("Invalid order amount.");
 }
 $totalAmount = $subtotal + $shippingCharge;
 mysqli_begin_transaction($conn);
-
 try {
     $orderSql = "
         INSERT INTO orders
@@ -239,7 +203,6 @@ try {
         $totalAmount,
         $paymentMethod
     );
-
     if (!mysqli_stmt_execute($stmt)) {
         $error = mysqli_stmt_error($stmt);
         mysqli_stmt_close($stmt);
@@ -250,13 +213,11 @@ try {
     }
     $orderId = mysqli_insert_id($conn);
     mysqli_stmt_close($stmt);
-
     if ($orderId <= 0) {
         throw new Exception(
             "Order could not be created."
         );
     }
-
     $itemSql = "
         INSERT INTO order_items
         (
@@ -273,19 +234,16 @@ try {
             ?
         )
     ";
-
     $itemStmt = mysqli_prepare(
         $conn,
         $itemSql
     );
-
     if (!$itemStmt) {
         throw new Exception(
             "Order item query failed: " .
             mysqli_error($conn)
         );
     }
-
     foreach ($cartQuantities as $productId => $quantity) {
         if ($quantity <= 0) {
             continue;
@@ -300,7 +258,6 @@ try {
             $quantity,
             $price
         );
-
         if (!mysqli_stmt_execute($itemStmt)) {
             $error = mysqli_stmt_error($itemStmt);
             mysqli_stmt_close($itemStmt);
@@ -331,20 +288,17 @@ try {
         $conn,
         $activitySql
     );
-
     if (!$activityStmt) {
         throw new Exception(
             "Activity query failed: " .
             mysqli_error($conn)
         );
     }
-
     foreach ($cartQuantities as $cartProductId => $quantity) {
         $cartProductId = (int) $cartProductId;
         if ($cartProductId <= 0) {
             continue;
         }
-
         mysqli_stmt_bind_param(
             $activityStmt,
             "iis",
@@ -352,7 +306,6 @@ try {
             $cartProductId,
             $activityType
         );
-
         if (!mysqli_stmt_execute($activityStmt)) {
             $activityError=mysqli_stmt_error($activityStmt);
             mysqli_stmt_close($activityStmt);
@@ -373,7 +326,6 @@ try {
         )
     );
 }
-
 if ($paymentMethod === "cash") {
     header(
         "Location: payment_success.php" .
@@ -383,14 +335,12 @@ if ($paymentMethod === "cash") {
     );
     exit();
 }
-
 if ($paymentMethod === "esewa") {
     $transactionUuid =
         "INK-" .
         $orderId .
         "-" .
         time();
-
     $sql = "
         UPDATE orders
         SET transaction_id = ?
@@ -401,14 +351,12 @@ if ($paymentMethod === "esewa") {
         $conn,
         $sql
     );
-
     if (!$stmt) {
         die(
             "Transaction update failed: " .
             mysqli_error($conn)
         );
     }
-
     mysqli_stmt_bind_param(
         $stmt,
         "sii",
@@ -416,7 +364,6 @@ if ($paymentMethod === "esewa") {
         $orderId,
         $userId
     );
-
     if (!mysqli_stmt_execute($stmt)) {
         $error = mysqli_stmt_error($stmt);
         mysqli_stmt_close($stmt);
@@ -448,7 +395,6 @@ if ($paymentMethod === "esewa") {
             ".",
             ""
         );
-
     $signedFieldNames="total_amount,transaction_uuid,product_code";
     $signatureMessage =
         "total_amount=" .
@@ -465,30 +411,21 @@ if ($paymentMethod === "esewa") {
             true
         )
     );
-
     $successUrl=$baseUrl ."/payment_success.php";
     $failureUrl =$baseUrl ."/payment_failure.php";
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        Redirecting to eSewa | Inknest
-    </title>
+    <title>Redirecting to eSewa | Inknest</title>
     <link rel="stylesheet" href="css/process_payment.css?v=<?php echo time(); ?>">
 </head>
-
 <body>
     <div class="loading">
-        <h2>
-            Redirecting to eSewa...
-        </h2>
-        <p>
-            Please wait while we connect you to eSewa.
-        </p>
+        <h2>Redirecting to eSewa...</h2>
+        <p>Please wait while we connect you to eSewa.</p>
         <form id="esewaForm" action="<?php echo htmlspecialchars($esewaUrl); ?>" method="POST">
             <input type="hidden" name="amount" value="<?php echo htmlspecialchars($amount); ?>">
             <input type="hidden" name="tax_amount" value="<?php echo htmlspecialchars($taxAmount); ?>">

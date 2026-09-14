@@ -1,9 +1,7 @@
 <?php
 session_start();
 include "../config/database.php";
-
 header("Content-Type: application/json");
-
 if (!isset($_SESSION["admin_id"])) {
     echo json_encode([
         "success" => false,
@@ -11,22 +9,16 @@ if (!isset($_SESSION["admin_id"])) {
     ]);
     exit();
 }
-
 $adminId = (int)$_SESSION["admin_id"];
-
 $productId = isset($_POST["product_id"])
     ? (int)$_POST["product_id"]
     : 0;
-
 $action = isset($_POST["action"])
     ? trim($_POST["action"])
     : "";
-
 $quantity = isset($_POST["quantity"])
     ? (int)$_POST["quantity"]
     : 0;
-
-
 if ($productId <= 0) {
     echo json_encode([
         "success" => false,
@@ -34,8 +26,6 @@ if ($productId <= 0) {
     ]);
     exit();
 }
-
-
 if (!in_array($action, ["add", "reduce", "set"], true)) {
     echo json_encode([
         "success" => false,
@@ -43,8 +33,6 @@ if (!in_array($action, ["add", "reduce", "set"], true)) {
     ]);
     exit();
 }
-
-
 if ($quantity < 0) {
     echo json_encode([
         "success" => false,
@@ -52,7 +40,6 @@ if ($quantity < 0) {
     ]);
     exit();
 }
-
 if (($action === "add" || $action === "reduce") && $quantity <= 0) {
     echo json_encode([
         "success" => false,
@@ -60,8 +47,6 @@ if (($action === "add" || $action === "reduce") && $quantity <= 0) {
     ]);
     exit();
 }
-
-
 try {
     mysqli_begin_transaction($conn);
     $stmt = mysqli_prepare(
@@ -71,17 +56,14 @@ try {
          WHERE id = ?
          FOR UPDATE"
     );
-
     if (!$stmt) {
         throw new Exception("Failed to prepare product query.");
     }
-
     mysqli_stmt_bind_param(
         $stmt,
         "i",
         $productId
     );
-
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     $product = mysqli_fetch_assoc($result);
@@ -89,15 +71,11 @@ try {
     if (!$product) {
         throw new Exception("Product not found.");
     }
-
-
     $productName = $product["product_name"];
     $oldStock = (int)$product["stock"];
     $newStock = $oldStock;
     $activityAction = null;
     $activityQuantity = 0;
-
-
     if ($action === "add") {
         $newStock = $oldStock + $quantity;
         $activityAction = "Increase";
@@ -132,11 +110,9 @@ try {
          SET stock = ?
          WHERE id = ?"
     );
-
     if (!$updateStmt) {
         throw new Exception("Failed to prepare stock update.");
     }
-
     mysqli_stmt_bind_param(
         $updateStmt,
         "ii",
@@ -148,7 +124,6 @@ try {
         throw new Exception("Failed to update stock.");
     }
     mysqli_stmt_close($updateStmt);
-
     if ($activityAction !== null && $activityQuantity > 0) {
         $historyStmt = mysqli_prepare(
             $conn,
@@ -163,11 +138,9 @@ try {
             )
             VALUES (?, ?, ?, ?, ?, ?)"
         );
-
         if (!$historyStmt) {
             throw new Exception("Failed to prepare stock history.");
         }
-
         mysqli_stmt_bind_param(
             $historyStmt,
             "iisiii",
@@ -178,7 +151,6 @@ try {
             $oldStock,
             $newStock
         );
-
         if (!mysqli_stmt_execute($historyStmt)) {
             mysqli_stmt_close($historyStmt);
             throw new Exception("Failed to record stock history.");

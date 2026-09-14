@@ -363,7 +363,6 @@ body {
 }
 
 @media (max-width: 700px) {
-
     .footer {
         padding: 30px 20px 15px;
     }
@@ -385,11 +384,9 @@ body {
     .footer-bottom {
         margin-top: 20px;
     }
-
 }
 
 @media (max-width: 450px) {
-
     .footer {
         padding: 25px 16px 14px;
     }
@@ -410,7 +407,6 @@ body {
     .footer-bottom p {
         font-size: 11px;
     }
-
 }
 
 @media (max-width: 750px) {

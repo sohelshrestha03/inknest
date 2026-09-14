@@ -1,7 +1,6 @@
 <?php
 session_start();
 include "config/database.php";
-
 if (isset($_SESSION["user_id"])) {
     $userId = (int) $_SESSION["user_id"];
     $activitySql = mysqli_prepare(
@@ -10,7 +9,6 @@ if (isset($_SESSION["user_id"])) {
          (user_id, product_id, activity_type, created_at)
          VALUES (?, NULL, 'Logged Out', NOW())"
     );
-
     if ($activitySql) {
         mysqli_stmt_bind_param(
             $activitySql,
@@ -21,7 +19,6 @@ if (isset($_SESSION["user_id"])) {
         mysqli_stmt_close($activitySql);
     }
 }
-
 $_SESSION = [];
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();

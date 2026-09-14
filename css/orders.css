@@ -206,7 +206,6 @@ tr:last-child td {
     font-size: 14px;
 }
 
-
 .payment-status {
     display: inline-block;
     padding: 5px 9px;
@@ -293,11 +292,8 @@ tr:last-child td {
 }
 
 .order-container {
-    width:
-        100%;
-
-    overflow:
-        hidden;
+    width:100%;
+    overflow:hidden;
 }
 
 .table-wrapper {
@@ -323,8 +319,7 @@ tr:last-child td {
 }
 
 .table-wrapper::-webkit-scrollbar-thumb:hover {
-    background:
-        #555555;
+    background:#555555;
 }
 
 .table-wrapper::-webkit-scrollbar {
@@ -351,7 +346,6 @@ tr:last-child td {
     border-collapse:collapse;
 }
 
-
 .table-wrapper th,
 .table-wrapper td {
     white-space:nowrap;
@@ -368,7 +362,6 @@ tr:last-child td {
 }
 
 @media (max-width: 800px) {
-
     .sidebar {
         width: 180px;
     }
@@ -378,5 +371,3 @@ tr:last-child td {
         padding: 20px;
     }
 }
-
-

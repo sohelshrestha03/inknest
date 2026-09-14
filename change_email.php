@@ -1,12 +1,10 @@
 <?php
 session_start();
 include "config/database.php";
-
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
 }
-
 $userId = $_SESSION["user_id"];
 $error = "";
 $success = "";
@@ -19,13 +17,11 @@ mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 $user = mysqli_fetch_assoc($result);
 mysqli_stmt_close($stmt);
-
 if (!$user) {
     session_destroy();
     header("Location: login.php");
     exit();
 }
-
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $newEmail = trim($_POST["email"] ?? "");
     if ($newEmail === "") {
@@ -46,7 +42,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         );
         mysqli_stmt_execute($check);
         $checkResult = mysqli_stmt_get_result($check);
-
         if (mysqli_num_rows($checkResult) > 0) {
             $error = "This email is already registered.";
         } else {
@@ -62,7 +57,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $newEmail,
                 $userId
             );
-
             if (mysqli_stmt_execute($update)) {
                 $user["email"] = $newEmail;
                 $success = "Email changed successfully.";
@@ -75,7 +69,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,7 +78,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <link rel="stylesheet" href="css/change_email.css?v=<?php echo time(); ?>">
     <script src="js/change_email.js" defer></script>
 </head>
-
 <body>
 <div class="container">
     <h1>Change Email</h1>
@@ -95,13 +87,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <?php echo htmlspecialchars($error); ?>
         </div>
     <?php endif; ?>
-
     <?php if ($success !== ""): ?>
         <div class="message success">
             <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
-
     <form method="POST" action="change_email.php" id="emailForm">
         <div class="form-group">
             <label for="email">New Email</label>

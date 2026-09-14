@@ -1,12 +1,10 @@
 <?php
 session_start();
 include "config/database.php";
-
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
 }
-
 $userId = (int) $_SESSION["user_id"];
 $username = $_SESSION["username"] ?? "User";
 $sql = "SELECT
@@ -44,79 +42,52 @@ $sql = "SELECT
         ORDER BY o.id DESC";
 
 $stmt = mysqli_prepare($conn, $sql);
-
 if (!$stmt) {
     die("Database query error: " . mysqli_error($conn));
 }
-
 mysqli_stmt_bind_param($stmt, "i", $userId);
-
 if (!mysqli_stmt_execute($stmt)) {
     die("Failed to load order history.");
 }
-
 $result = mysqli_stmt_get_result($stmt);
-
 $orders = [];
-
 while ($order = mysqli_fetch_assoc($result)) {
     $orders[] = $order;
 }
-
 mysqli_stmt_close($stmt);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order History | Inknest</title>
     <link rel="stylesheet" href="css/history.css?v=<?php echo time(); ?>">
 </head>
-
 <body>
 <nav class="navbar">
     <h1>Inknest</h1>
     <div class="nav-links">
-        <span>
-            Hi,
-            <?php echo htmlspecialchars($username); ?>
-        </span>
+        <span>Hi,<?php echo htmlspecialchars($username); ?></span>
         <a href="home.php">Products</a>
         <a href="cart.php">Cart</a>
         <a href="history.php">History</a>
         <a href="logout.php">Logout</a>
     </div>
 </nav>
-
-
 <main class="container">
     <div class="heading">
         <a href="cart.php" class="back-link">Back to Cart</a>
-        <h2>
-            Order History
-        </h2>
-        <p>
-            View your previous orders and their current status.
-        </p>
+        <h2>Order History</h2>
+        <p>View your previous orders and their current status.</p>
     </div>
-
     <?php if (count($orders) === 0): ?>
         <div class="empty-history">
-            <h3>
-                No Orders Yet
-            </h3>
-            <p>
-                You have not placed any orders yet.
-            </p>
-            <a href="home.php" class="shop-button">
-                Start Shopping
-            </a>
+            <h3>No Orders Yet</h3>
+            <p>You have not placed any orders yet.</p>
+            <a href="home.php" class="shop-button">Start Shopping</a>
         </div>
     <?php else: ?>
-
         <div class="orders-container">
             <?php foreach ($orders as $order): ?>
                 <?php
@@ -150,7 +121,6 @@ mysqli_stmt_close($stmt);
                     )
                     : "N/A";
                 ?>
-
                 <div class="order-card">
                     <div class="order-header">
                         <div>
@@ -166,7 +136,6 @@ mysqli_stmt_close($stmt);
                                 ?>
                             </span>
                         </div>
-
                         <div class="order-amount">
                             Rs.
                             <?php
@@ -177,7 +146,6 @@ mysqli_stmt_close($stmt);
                             ?>
                         </div>
                     </div>
-
                     <div class="order-details">
                         <div class="detail-box">
                             <span>
@@ -191,7 +159,6 @@ mysqli_stmt_close($stmt);
                                 ?>
                             </strong>
                         </div>
-
                         <div class="detail-box">
                             <span>
                                 Order Status
@@ -206,7 +173,6 @@ mysqli_stmt_close($stmt);
                                 </span>
                             </strong>
                         </div>
-
                         <div class="detail-box">
                             <span>
                                 Payment Method
@@ -217,7 +183,6 @@ mysqli_stmt_close($stmt);
                                 ?>
                             </strong>
                         </div>
-
                         <div class="detail-box">
                             <span>
                                 Payment Status
@@ -232,7 +197,6 @@ mysqli_stmt_close($stmt);
                                 </span>
                             </strong>
                         </div>
-
                         <div class="detail-box">
                             <span>
                                 Transaction ID
@@ -249,7 +213,6 @@ mysqli_stmt_close($stmt);
                                 <?php endif; ?>
                             </strong>
                         </div>
-
                         <div class="detail-box">
                             <span>
                                 Payment Amount
@@ -262,11 +225,9 @@ mysqli_stmt_close($stmt);
                                     2
                                 );
                                 ?>
-
                             </strong>
                         </div>
                     </div>
-
                     <?php
                     $canCancel = in_array(
                         strtolower($order["status"] ?? ""),
@@ -277,7 +238,6 @@ mysqli_stmt_close($stmt);
                         true
                     );
                     ?>
-
                     <?php if ($canCancel): ?>
                         <div class="order-actions">
                             <form action="cancel_order.php" method="POST" onsubmit="return confirm('Are you sure you want to cancel this order?');">
@@ -317,7 +277,6 @@ mysqli_stmt_close($stmt);
             </div>
         </div>
     </div>
-
     <div class="footer-bottom">
         <p>
             &copy; <?php echo date("Y"); ?> Inknest. All rights reserved.

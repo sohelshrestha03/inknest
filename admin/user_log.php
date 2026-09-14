@@ -1,12 +1,10 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 $adminUsername = $_SESSION["admin_username"];
 $activityQuery = mysqli_query(
     $conn,
@@ -24,7 +22,6 @@ $activityQuery = mysqli_query(
      ORDER BY upa.created_at DESC"
 );
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,7 +31,6 @@ $activityQuery = mysqli_query(
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
     <script src="../js/admin_dashboard.js" defer></script>
 </head>
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
@@ -61,25 +57,19 @@ $activityQuery = mysqli_query(
                 </span>
             </a>
     </nav>
-
     <div class="sidebar-bottom">
         <a href="admin_logout.php">
             Logout
         </a>
     </div>
 </aside>
-
-
 <main class="main">
     <header class="header">
         <div>
             <h2>User Activity</h2>
-            <p>
-                View user product activity
-            </p>
+            <p>View user product activity</p>
         </div>
     </header>
-
     <section class="section">
         <h3>User Activity Log</h3>
         <?php if ($activityQuery && mysqli_num_rows($activityQuery) > 0): ?>
@@ -93,16 +83,10 @@ $activityQuery = mysqli_query(
                         <th>Date & Time</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     <?php while ($activity = mysqli_fetch_assoc($activityQuery)): ?>
                         <tr>
-                            <td>
-                                <?php
-                                echo htmlspecialchars($activity["id"]);
-                                ?>
-                            </td>
-
+                            <td><?php echo htmlspecialchars($activity["id"]);?></td>
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -110,7 +94,6 @@ $activityQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -118,7 +101,6 @@ $activityQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <span class="activity-badge">
                                     <?php 
@@ -128,7 +110,6 @@ $activityQuery = mysqli_query(
                                     ?>
                                 </span>
                             </td>
-
                             <td>
                                 <?php
                                 echo date(
@@ -141,7 +122,7 @@ $activityQuery = mysqli_query(
                     <?php endwhile; ?>
                 </tbody>
             </table>
-        <?php else: ?>
+         <?php else: ?>
             <p>No user activity found.</p>
         <?php endif; ?>
     </section>

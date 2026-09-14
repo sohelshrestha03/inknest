@@ -1,7 +1,6 @@
 <?php
 session_start();
 include "config/database.php";
-
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
@@ -13,19 +12,16 @@ $stmt = mysqli_prepare(
     $conn,
     "SELECT user_name FROM users WHERE id = ?"
 );
-
 mysqli_stmt_bind_param($stmt, "i", $userId);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 $user = mysqli_fetch_assoc($result);
 mysqli_stmt_close($stmt);
-
 if (!$user) {
     session_destroy();
     header("Location: login.php");
     exit();
 }
-
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $newUsername = trim($_POST["username"] ?? "");
     if ($newUsername === "") {
@@ -48,7 +44,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         );
         mysqli_stmt_execute($check);
         $checkResult = mysqli_stmt_get_result($check);
-
         if (mysqli_num_rows($checkResult) > 0) {
             $error = "Username is already taken.";
         } else {
@@ -64,7 +59,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $newUsername,
                 $userId
             );
-
             if (mysqli_stmt_execute($update)) {
                 $_SESSION["username"] = $newUsername;
                 $user["user_name"] = $newUsername;
@@ -78,7 +72,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,24 +81,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <link rel="stylesheet" href="css/change_username.css?v=<?php echo time(); ?>">
     <script src="js/change_username.js" defer></script>
 </head>
-
 <body>
 <div class="container">
     <h1>Change Username</h1>
     <p class="subtitle">Update your Inknest username.</p>
-
     <?php if ($error !== ""): ?>
         <div class="message error">
             <?php echo htmlspecialchars($error); ?>
         </div>
     <?php endif; ?>
-
     <?php if ($success !== ""): ?>
         <div class="message success">
             <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
-
     <form method="POST" action="change_username.php" id="usernameForm">
         <div class="form-group">
             <label for="username">New Username</label>

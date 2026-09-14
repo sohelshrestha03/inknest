@@ -2,7 +2,6 @@
 session_start();
 include "config/database.php";
 header("Content-Type: application/json");
-
 if (!isset($_SESSION["user_id"])) {
     echo json_encode([
         "success" => false,
@@ -10,11 +9,9 @@ if (!isset($_SESSION["user_id"])) {
     ]);
     exit();
 }
-
 $productId = isset($_POST["product_id"])
     ? (int) $_POST["product_id"]
     : 0;
-
 if ($productId <= 0) {
     echo json_encode([
         "success" => false,
@@ -22,7 +19,6 @@ if ($productId <= 0) {
     ]);
     exit();
 }
-
 $sql = mysqli_prepare(
     $conn,
     "UPDATE products
@@ -36,7 +32,6 @@ mysqli_stmt_bind_param(
 );
 mysqli_stmt_execute($sql);
 mysqli_stmt_close($sql);
-
 $stockSql = mysqli_prepare(
     $conn,
     "SELECT stock FROM products WHERE id = ?"
@@ -46,13 +41,11 @@ mysqli_stmt_bind_param(
     "i",
     $productId
 );
-
 mysqli_stmt_execute($stockSql);
 $result = mysqli_stmt_get_result($stockSql);
 $product = mysqli_fetch_assoc($result);
 $stock = (int) $product["stock"];
 mysqli_stmt_close($stockSql);
-
 echo json_encode([
     "success" => true,
     "stock" => $stock

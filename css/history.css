@@ -256,8 +256,6 @@ body {
     color: #fff;
 }
 
-/* Footer */
-
 .footer {
     margin-top: 45px;
     background: #111;
@@ -333,10 +331,7 @@ body {
     font-size: 11px;
 }
 
-/* Tablet */
-
 @media (max-width: 850px) {
-
     .navbar {
         padding: 15px 20px;
         flex-direction: column;
@@ -379,10 +374,7 @@ body {
     }
 }
 
-/* Mobile */
-
 @media (max-width: 700px) {
-
     .footer {
         padding: 28px 20px 14px;
     }
@@ -412,7 +404,6 @@ body {
 }
 
 @media (max-width: 480px) {
-
     .navbar h1 {
         font-size: 23px;
     }

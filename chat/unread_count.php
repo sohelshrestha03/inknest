@@ -2,7 +2,6 @@
 session_start();
 include "../config/database.php";
 header("Content-Type: application/json");
-
 if (!isset($_SESSION["user_id"])) {
     echo json_encode([
         "success" => false,
@@ -10,7 +9,6 @@ if (!isset($_SESSION["user_id"])) {
     ]);
     exit();
 }
-
 $userId = (int) $_SESSION["user_id"];
 $sql = "
     SELECT COUNT(cm.id)
@@ -22,7 +20,6 @@ $sql = "
     AND cm.sender_type = 'admin'
     AND cm.is_read = 0
 ";
-
 $stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param(
     $stmt,
@@ -36,7 +33,6 @@ mysqli_stmt_bind_result(
 );
 mysqli_stmt_fetch($stmt);
 mysqli_stmt_close($stmt);
-
 echo json_encode([
     "success" => true,
     "count" => (int) $unreadCount

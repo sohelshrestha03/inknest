@@ -2,16 +2,13 @@
 session_start();
 include "../config/database.php";
 header("Content-Type: application/json");
-
 if (!isset($_SESSION["user_id"])) {
     echo json_encode([
         "success" => false,
         "message" => "Please login first."
     ]);
-
     exit();
 }
-
 $userId = (int) $_SESSION["user_id"];
 $sql = "
     SELECT
@@ -26,7 +23,6 @@ $sql = "
     LIMIT 1
 ";
 $stmt = mysqli_prepare($conn, $sql);
-
 if (!$stmt) {
     echo json_encode([
         "success" => false,
@@ -34,13 +30,11 @@ if (!$stmt) {
     ]);
     exit();
 }
-
 mysqli_stmt_bind_param(
     $stmt,
     "i",
     $userId
 );
-
 mysqli_stmt_execute($stmt);
 mysqli_stmt_bind_result(
     $stmt,
@@ -49,7 +43,6 @@ mysqli_stmt_bind_result(
     $createdAt,
     $updatedAt
 );
-
 if (mysqli_stmt_fetch($stmt)) {
     mysqli_stmt_close($stmt);
     echo json_encode([
@@ -63,7 +56,6 @@ if (mysqli_stmt_fetch($stmt)) {
     ]);
     exit();
 }
-
 mysqli_stmt_close($stmt);
 echo json_encode([
     "success" => true,

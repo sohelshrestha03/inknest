@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
     const deleteAccountForm =document.getElementById("deleteAccountForm");
-
     if (deleteAccountForm) {
         deleteAccountForm.addEventListener(
             "submit",
@@ -12,49 +11,33 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         );
     }
-    const deleteButtons =
-        document.querySelectorAll(
-            ".delete-user"
-        );
-
+    const deleteButtons =document.querySelectorAll(".delete-user");
     deleteButtons.forEach(
         function (button) {
             button.addEventListener(
                 "click",
                 function (event) {
-                    const confirmed =
-                        confirm(
-                            "Are you sure you want to delete this user?"
-                        );
-
+                    const confirmed =confirm("Are you sure you want to delete this user?");
                     if (!confirmed) {
                         event.preventDefault();
                     }
                 }
             );
-
         }
     );
-
-    const logout =
-        document.querySelector(
+    const logout =document.querySelector(
             'a[href="logout.php"]'
         );
-
     if (logout) {
         logout.addEventListener(
             "click",
             function (event) {
                 const confirmed =
-                    confirm(
-                        "Are you sure you want to logout?"
-                    );
-
+                    confirm("Are you sure you want to logout?");
                 if (!confirmed) {
                     event.preventDefault();
                 }
             }
         );
     }
-
 });

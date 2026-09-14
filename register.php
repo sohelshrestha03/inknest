@@ -1,9 +1,7 @@
 <?php 
- 
 session_start(); 
 date_default_timezone_set("Asia/Kathmandu"); 
 require_once "config/database.php"; 
- 
 $otpStep = false; 
 $errorMessage = ""; 
  

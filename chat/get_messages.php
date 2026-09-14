@@ -2,31 +2,25 @@
 session_start();
 include "../config/database.php";
 header("Content-Type: application/json");
-
 if (!isset($_SESSION["user_id"])) {
     echo json_encode([
         "success" => false,
         "message" => "Please login first."
     ]);
-
     exit();
 }
-
 $userId = (int) $_SESSION["user_id"];
 $conversationId =
     isset($_GET["conversation_id"])
         ? (int) $_GET["conversation_id"]
         : 0;
-
 if ($conversationId <= 0) {
     echo json_encode([
         "success" => false,
         "message" => "Invalid conversation."
     ]);
-
     exit();
 }
-
 $sql = "
     SELECT id
     FROM chat_conversations
@@ -41,10 +35,8 @@ mysqli_stmt_bind_param(
     $conversationId,
     $userId
 );
-
 mysqli_stmt_execute($stmt);
 mysqli_stmt_store_result($stmt);
-
 if (mysqli_stmt_num_rows($stmt) === 0) {
     mysqli_stmt_close($stmt);
     echo json_encode([
@@ -53,9 +45,7 @@ if (mysqli_stmt_num_rows($stmt) === 0) {
     ]);
     exit();
 }
-
 mysqli_stmt_close($stmt);
-
 $sql = "
     SELECT
         id,
@@ -68,7 +58,6 @@ $sql = "
     WHERE conversation_id = ?
     ORDER BY id ASC
 ";
-
 $stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param(
     $stmt,
@@ -85,7 +74,6 @@ mysqli_stmt_bind_result(
     $isRead,
     $createdAt
 );
-
 $messages = [];
 while (mysqli_stmt_fetch($stmt)) {
     $messages[] = [
@@ -97,7 +85,6 @@ while (mysqli_stmt_fetch($stmt)) {
         "created_at" => $createdAt
     ];
 }
-
 mysqli_stmt_close($stmt);
 echo json_encode([
     "success" => true,

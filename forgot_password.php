@@ -2,7 +2,6 @@
 session_start();
 include "config/database.php";
 $error = "";
-
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email=strtolower(trim($_POST["email"] ?? ""));
     if ($email === "") {
@@ -30,7 +29,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             );
             mysqli_stmt_execute($sql);
             $result=mysqli_stmt_get_result($sql);
-
             if (mysqli_num_rows($result) === 1) {
                 $user =mysqli_fetch_assoc($result);
                 $_SESSION["reset_user_id"]=(int) $user["id"];
@@ -53,38 +51,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        Forgot Password | Inknest
-    </title>
+    <title>Forgot Password | Inknest</title>
     <link rel="stylesheet" href="css/forgot_password.css?v=<?php echo time(); ?>">
     <script src="js/forgot_password.js" defer></script>
 </head>
-
-
 <body>
 <nav class="navigation">
-    <h1>
-        Inknest
-    </h1>
-    <a href="login.php">
-        Back
-    </a>
+    <h1>Inknest</h1>
+    <a href="login.php">Back</a>
 </nav>
-
 <div class="forgot-container">
     <div class="forgot-card">
-        <h2>
-            Forgot Password?
-        </h2>
-        <p class="subtitle">
-            Enter Your Registered Email
-        </p>
+        <h2>Forgot Password?</h2>
+        <p class="subtitle">Enter Your Registered Email</p>
         <?php if (!empty($error)): ?>
             <div class="error-box">
                 <?php
@@ -101,11 +85,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" placeholder="Enter your email" autocomplete="email"  required>
             </div>
-            <button type="submit">
-                Continue
-            </button>
-            <p class="login-link">
-                Remember your password?
+            <button type="submit">Continue</button>
+            <p class="login-link">Remember your password?
                 <a href="login.php">Login</a>
             </p>
         </form>

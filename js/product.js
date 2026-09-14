@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const priceError =document.getElementById("priceError");
     const stockError =document.getElementById("stockError");
     const imageError =document.getElementById("imageError");
-
     function clearErrors() {
         productNameError.textContent = "";
         categoryError.textContent = "";
@@ -29,7 +28,6 @@ document.addEventListener("DOMContentLoaded", function () {
         stock.classList.remove("input-error");
         productImage.classList.remove("input-error");
     }
-
     productImage.addEventListener(
         "change",
         function () {
@@ -61,7 +59,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
                 return;
             }
-
             if (file.size > maxSize) {
                 imageError.textContent =
                     "Image size must be less than 5 MB.";
@@ -74,7 +71,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
                 return;
             }
-
             const reader =new FileReader();
             reader.onload = function (event) {
                 previewImage.src =event.target.result;
@@ -83,7 +79,6 @@ document.addEventListener("DOMContentLoaded", function () {
             reader.readAsDataURL(file);
         }
     );
-
     form.addEventListener(
         "submit",
         function (event) {
@@ -98,13 +93,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 productName.classList.add("input-error");
                 valid = false;
             }
-
             if (category.value.trim() === "") {
                 categoryError.textContent ="Category is required.";
                 category.classList.add("input-error");
                 valid = false;
             }
-
             if (description.value.trim() === "") {
                 descriptionError.textContent ="Description is required.";
                 description.classList.add("input-error");
@@ -114,7 +107,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 description.classList.add("input-error");
                 valid = false;
             }
-
             const priceValue =parseFloat(price.value);
             if (price.value.trim() === "") {
                 priceError.textContent ="Price is required.";
@@ -129,7 +121,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 price.classList.add("input-error");
                 valid = false;
             }
-
             const stockValue =Number(stock.value);
             if (stock.value.trim() === "") {
                 stockError.textContent ="Stock quantity is required.";
@@ -144,7 +135,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 stock.classList.add("input-error");
                 valid = false;
             }
-
             if (productImage.files.length > 0) {
                 const file =productImage.files[0];
                 const allowedTypes = [
@@ -152,23 +142,18 @@ document.addEventListener("DOMContentLoaded", function () {
                     "image/png",
                     "image/webp"
                 ];
-
                 const maxSize =5 * 1024 * 1024;
-
-
                 if (!allowedTypes.includes(file.type)) {
                     imageError.textContent ="Only JPG, PNG and WEBP images are allowed.";
                     productImage.classList.add("input-error");
                     valid = false;
                 }
-
                 if (file.size > maxSize) {
                     imageError.textContent ="Image size must be less than 5 MB.";
                     productImage.classList.add("input-error");
                     valid = false;
                 }
             }
-
             if (!valid) {
                 event.preventDefault();
                 window.scrollTo({
@@ -178,9 +163,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
     );
-
-
-    
     productName.addEventListener(
         "input",
         function () {
@@ -190,7 +172,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     );
-
     category.addEventListener(
         "input",
         function () {
@@ -200,8 +181,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     );
-
-
     description.addEventListener(
         "input",
         function () {
@@ -211,8 +190,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     );
-
-
     price.addEventListener(
         "input",
         function () {
@@ -222,8 +199,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     );
-
-
     stock.addEventListener(
         "input",
         function () {
@@ -233,5 +208,4 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     );
-
 });

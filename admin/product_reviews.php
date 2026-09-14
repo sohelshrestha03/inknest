@@ -1,12 +1,10 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 $adminUsername = $_SESSION["admin_username"];
 $reviewQuery = mysqli_query(
     $conn,
@@ -26,7 +24,6 @@ $reviewQuery = mysqli_query(
      ORDER BY pr.created_at DESC"
 );
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,7 +33,6 @@ $reviewQuery = mysqli_query(
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
     <script src="../js/admin_dashboard.js" defer></script>
 </head>
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
@@ -63,24 +59,19 @@ $reviewQuery = mysqli_query(
                 </span>
             </a>
     </nav>
-
     <div class="sidebar-bottom">
         <a href="admin_logout.php">
             Logout
         </a>
     </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>
             <h2>Product Reviews</h2>
-            <p>
-                View customer product reviews
-            </p>
+            <p>View customer product reviews</p>
         </div>
     </header>
-
     <section class="section">
         <h3>Product Reviews</h3>
         <?php if ($reviewQuery && mysqli_num_rows($reviewQuery) > 0): ?>
@@ -104,7 +95,6 @@ $reviewQuery = mysqli_query(
                                 echo htmlspecialchars($review["id"]);
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -112,7 +102,6 @@ $reviewQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -120,7 +109,6 @@ $reviewQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -128,7 +116,6 @@ $reviewQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -136,16 +123,13 @@ $reviewQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php if (!empty($review["parent_review_id"])): ?>
                                     Reply
                                 <?php else: ?>
-
                                     Review
                                 <?php endif; ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo date(

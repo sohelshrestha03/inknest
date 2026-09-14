@@ -1,12 +1,10 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 $adminUsername = $_SESSION["admin_username"];
 $profileQuery = mysqli_query(
     $conn,
@@ -26,7 +24,6 @@ $profileQuery = mysqli_query(
      ORDER BY up.updated_at DESC"
 );
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,7 +33,6 @@ $profileQuery = mysqli_query(
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
     <script src="../js/admin_dashboard.js" defer></script>
 </head>
-
 <body>
 <aside class="sidebar">
     <h1>Inknest</h1>
@@ -63,24 +59,19 @@ $profileQuery = mysqli_query(
                 </span>
             </a>
     </nav>
-
     <div class="sidebar-bottom">
         <a href="admin_logout.php">
             Logout
         </a>
     </div>
 </aside>
-
 <main class="main">
     <header class="header">
         <div>
             <h2>User Profiles</h2>
-            <p>
-                View registered user profiles
-            </p>
+            <p>View registered user profiles</p>
         </div>
     </header>
-
     <section class="section">
         <h3>User Profiles</h3>
         <?php if ($profileQuery && mysqli_num_rows($profileQuery) > 0): ?>
@@ -97,7 +88,6 @@ $profileQuery = mysqli_query(
                         <th>Updated At</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     <?php while ($profile = mysqli_fetch_assoc($profileQuery)): ?>
                         <tr>
@@ -106,7 +96,6 @@ $profileQuery = mysqli_query(
                                 echo htmlspecialchars($profile["id"]);
                                 ?>
                             </td>
-
                             <td>
                                 <?php if (!empty($profile["profile_picture"])): ?>
                                     <img src="../images/profile/<?php echo htmlspecialchars($profile["profile_picture"]); ?>"
@@ -115,7 +104,6 @@ $profileQuery = mysqli_query(
                                     No Picture
                                 <?php endif; ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -126,7 +114,6 @@ $profileQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -134,7 +121,6 @@ $profileQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -142,7 +128,6 @@ $profileQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo htmlspecialchars(
@@ -150,7 +135,6 @@ $profileQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo date(
@@ -159,7 +143,6 @@ $profileQuery = mysqli_query(
                                 );
                                 ?>
                             </td>
-
                             <td>
                                 <?php
                                 echo date(
@@ -172,7 +155,7 @@ $profileQuery = mysqli_query(
                     <?php endwhile; ?>
                 </tbody>
             </table>
-        <?php else: ?>
+         <?php else: ?>
             <p>No user profiles found.</p>
         <?php endif; ?>
     </section>

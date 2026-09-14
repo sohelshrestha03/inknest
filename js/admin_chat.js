@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const chatInput = document.getElementById("adminChatInput");
     const chatSend = document.getElementById("adminChatSend");
     const chatBadge = document.getElementById("adminChatBadge");
-
     if (!conversationList ||
         !chatAvatar ||
         !chatUserName ||
@@ -21,12 +20,10 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         return;
     }
-
     let conversations = [];
     let selectedConversationId = 0;
     let conversationsController = null;
     let messagesController = null;
-
     function getInitial(name) {
         const cleanName =String(name || "").trim();
         if (!cleanName) {
@@ -36,7 +33,6 @@ document.addEventListener("DOMContentLoaded", function () {
             .charAt(0)
             .toUpperCase();
     }
-
     function getCustomerName(conversation) {
         return String(
             conversation?.name ||
@@ -44,8 +40,6 @@ document.addEventListener("DOMContentLoaded", function () {
             "Customer"
         ).trim() || "Customer";
     }
-
-
     function getProfileImageUrl(profilePicture) {
         const picture=String(profilePicture || "").trim();
         if (!picture) {
@@ -56,7 +50,6 @@ document.addEventListener("DOMContentLoaded", function () {
             encodeURIComponent(picture)
         );
     }
-
     function setAvatar(
         element,
         name,
@@ -72,7 +65,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const imageUrl =getProfileImageUrl(
                 profilePicture
             );
-
         if (!imageUrl) {
             return;
         }
@@ -83,7 +75,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 element.innerHTML = "";
                 element.appendChild(image);
             };
-
         image.onerror =
             function () {
                 console.warn(
@@ -94,7 +85,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 element.textContent =initial;
             };
     }
-
     function createAvatar(conversation) {
         const avatar =document.createElement("div");
         avatar.className ="admin-conversation-avatar";
@@ -105,7 +95,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         return avatar;
     }
-
     async function loadConversations() {
         if (conversationsController) {
             conversationsController.abort();
@@ -122,20 +111,17 @@ document.addEventListener("DOMContentLoaded", function () {
                             conversationsController.signal
                     }
                 );
-
             if (!response.ok) {
                 throw new Error(
                     "HTTP error: " +
                     response.status
                 );
             }
-
             const data =await response.json();
             console.log(
                 "Admin chat conversations:",
                 data
             );
-
             if (!data.success) {
                 throw new Error(
                     data.message ||
@@ -163,7 +149,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 `;
         }
     }
-
     function renderConversations() {
         conversationList.innerHTML ="";
         if (conversations.length === 0) {
@@ -173,64 +158,31 @@ document.addEventListener("DOMContentLoaded", function () {
                     No open conversations.
                 </div>
                 `;
-
             return;
         }
         conversations.forEach(
             function (conversation) {
-                const item =
-                    document.createElement(
-                        "button"
-                    );
+                const item =document.createElement("button");
                 item.type = "button";
                 item.className = "admin-conversation-item";
                 if (Number(conversation.id) ===Number(selectedConversationId)) {
-                    item.classList.add(
-                        "selected"
-                    );
+                    item.classList.add("selected");
                 }
-                const content =document.createElement(
-                        "div"
-                    );
+                const content =document.createElement("div");
                 content.className ="admin-conversation-content";
-                const avatar =
-                    createAvatar(
-                        conversation
-                    );
-                const text =document.createElement(
-                        "div"
-                    );
+                const avatar =createAvatar(conversation);
+                const text =document.createElement("div");
                 text.className ="admin-conversation-text";
-                const name =
-                    document.createElement(
-                        "strong"
-                    );
-                name.textContent =getCustomerName(
-                        conversation
-                    );
-                const lastMessage =document.createElement(
-                        "span"
-                    );
+                const name =document.createElement("strong");
+                name.textContent =getCustomerName(conversation);
+                const lastMessage =document.createElement("span");
                 lastMessage.textContent = conversation.last_message ||"No messages yet.";
-                const bottom = document.createElement(
-                        "div"
-                    );
+                const bottom = document.createElement("div");
                 bottom.className ="admin-conversation-bottom";
-                const time =document.createElement(
-                        "small"
-                    );
-                time.textContent=formatTime(
-                        conversation.last_message_time
-                    );
-                bottom.appendChild(
-                    time
-                );
-
-                const unread =Number(
-                        conversation.unread_count ||
-                        0
-                    );
-
+                const time =document.createElement("small");
+                time.textContent=formatTime(conversation.last_message_time);
+                bottom.appendChild(time);
+                const unread =Number(conversation.unread_count || 0);
                 if (unread > 0) {
                     const unreadBadge =document.createElement(
                             "span"
@@ -259,7 +211,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 content.appendChild(
                     text
                 );
-
                 item.appendChild(
                     content
                 );
@@ -280,9 +231,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
             }
         );
-
     }
-
     async function loadSelectedConversation() {
         if (!selectedConversationId) {
             resetChat();
@@ -307,7 +256,6 @@ document.addEventListener("DOMContentLoaded", function () {
                             messagesController.signal
                     }
                 );
-
             if (!response.ok) {
                 throw new Error(
                     "HTTP error: " +
@@ -326,7 +274,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     "Failed to load conversation."
                 );
             }
-
             renderHeader(
                 data.conversation || {}
             );
@@ -359,7 +306,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 `;
         }
     }
-
     function resetChat() {
         chatUserName.textContent ="Select a conversation";
         chatUserEmail.textContent ="Choose a customer to start chatting.";
@@ -374,7 +320,6 @@ document.addEventListener("DOMContentLoaded", function () {
         chatInput.disabled=true;
         chatSend.disabled=true;
     }
-
     function renderHeader(
         conversation
     ) {
@@ -392,7 +337,6 @@ document.addEventListener("DOMContentLoaded", function () {
             conversation.profile_picture
         );
     }
-
     function renderMessages(
         messages
     ) {
@@ -414,7 +358,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 const senderType =String(
                         message.sender_type || ""
                     ).toLowerCase();
-
                 if (senderType === "admin") {
                     wrapper.className="admin-chat-message admin-message";
                 } else {
@@ -442,7 +385,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         chatMessages.scrollTop =chatMessages.scrollHeight;
     }
-
     async function sendReply() {
         if (!selectedConversationId) {
             return;
@@ -471,14 +413,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         body: formData
                     }
                 );
-
             if (!response.ok) {
                 throw new Error(
                     "HTTP error: " +
                     response.status
                 );
             }
-
             const data =await response.json();
             if (!data.success) {
                 throw new Error(
@@ -504,12 +444,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
     }
-
     async function markRead(conversationId) {
         if (!conversationId) {
             return;
         }
-
         try {
             const formData =new FormData();
             formData.append(
@@ -523,7 +461,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         body: formData
                     }
                 );
-
             if (!response.ok) {
                 throw new Error(
                     "HTTP error: " +
@@ -538,7 +475,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     }
-
     function updateUnreadBadge() {
         let totalUnread = 0;
         conversations.forEach(
@@ -550,7 +486,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
             }
         );
-
         if (totalUnread > 0) {
             chatBadge.textContent =
                 totalUnread > 99
@@ -562,7 +497,6 @@ document.addEventListener("DOMContentLoaded", function () {
             chatBadge.style.display ="none";
         }
     }
-
     function formatTime(value) {
         if (!value) {
             return "";
@@ -575,7 +509,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     "T"
                 )
             );
-
         if (Number.isNaN(date.getTime())) {
             return rawValue;
         }
@@ -618,5 +551,4 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         3000
     );
-
 });

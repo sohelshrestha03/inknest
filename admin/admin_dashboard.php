@@ -8,59 +8,48 @@ if (!isset($_SESSION["admin_id"])) {
 } 
  
 $adminUsername = $_SESSION["admin_username"]; 
-
 $productQuery = mysqli_query( 
     $conn, 
     "SELECT COUNT(*) AS total FROM products" 
 ); 
- 
 $productData = mysqli_fetch_assoc($productQuery); 
 $totalProducts = $productData["total"]; 
-
 $userQuery = mysqli_query( 
     $conn, 
     "SELECT COUNT(*) AS total FROM users" 
 ); 
-
 $userData = mysqli_fetch_assoc($userQuery); 
 $totalUsers = $userData["total"]; 
-
 $orderQuery = mysqli_query( 
     $conn, 
     "SELECT COUNT(*) AS total FROM orders" 
 ); 
- 
 if ($orderQuery) { 
     $orderData = mysqli_fetch_assoc($orderQuery); 
     $totalOrders = $orderData["total"]; 
 } else { 
     $totalOrders = 0; 
 }
-
 $salesQuery = mysqli_query(
     $conn,
     "SELECT COALESCE(SUM(total_amount), 0) AS total_sales FROM orders"
 );
-
 if ($salesQuery) {
     $salesData = mysqli_fetch_assoc($salesQuery);
     $totalSales = $salesData["total_sales"];
 } else {
     $totalSales = 0;
 }
-
 $deliveryQuery = mysqli_query(
     $conn,
     "SELECT COUNT(*) AS total FROM orders WHERE status = 'delivered'"
 );
-
 if ($deliveryQuery) {
     $deliveryData = mysqli_fetch_assoc($deliveryQuery);
     $totalDeliveries = $deliveryData["total"];
 } else {
     $totalDeliveries = 0;
 }
-
 $stockQuery = mysqli_query(
     $conn,
     "SELECT 
@@ -71,23 +60,19 @@ $stockQuery = mysqli_query(
      ORDER BY stock_date ASC
      LIMIT 10"
 );
-
 $stockLabels = [];
 $stockValues = [];
-
 if ($stockQuery) {
     while ($stockRow = mysqli_fetch_assoc($stockQuery)) {
         $stockLabels[] = date("M d", strtotime($stockRow["stock_date"]));
         $stockValues[] = (int)$stockRow["total_stock"];
     }
 }
-
 if (empty($stockLabels)) {
     $stockLabels = ["No Data"];
     $stockValues = [0];
 }
 ?> 
- 
 <!DOCTYPE html> 
 <html lang="en"> 
 <head> 
@@ -98,13 +83,10 @@ if (empty($stockLabels)) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../js/admin_dashboard.js" defer></script> 
 </head> 
- 
 <body> 
-
 <aside class="sidebar"> 
     <h1>Inknest</h1> 
     <p class="admin-label">ADMIN PANEL</p> 
-
     <nav> 
         <a href="admin_dashboard.php" class="active">Dashboard</a> 
         <a href="products.php">Products</a> 
@@ -121,14 +103,11 @@ if (empty($stockLabels)) {
         <a href="chat.php">Chat<span id="adminChatSidebarBadge" class="admin-chat-badge">
             0</span></a> 
     </nav> 
-     
     <div class="sidebar-bottom"> 
         <a href="admin_logout.php">Logout</a> 
     </div> 
 </aside> 
- 
 <main class="main"> 
-
     <header class="header"> 
         <div> 
             <h2>Dashboard</h2> 
@@ -166,7 +145,6 @@ if (empty($stockLabels)) {
             <a href="users.php">View Users</a> 
         </div> 
     </section>
-
     <section class="section stock-chart-section">
         <h3>Stock Overview</h3>
         <div class="chart-container">
@@ -178,7 +156,6 @@ if (empty($stockLabels)) {
 const stockLabels = <?php echo json_encode($stockLabels); ?>;
 const stockValues = <?php echo json_encode($stockValues); ?>;
 const stockChart = document.getElementById("stockChart");
-
 new Chart(stockChart, {
     type: "line",
     data: {

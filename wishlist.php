@@ -1,11 +1,7 @@
 <?php
-
 session_start();
-
 include "config/database.php";
-
 header("Content-Type: application/json; charset=UTF-8");
-
 if (!isset($_SESSION["user_id"])) {
     echo json_encode([
         "success" => false,
@@ -13,10 +9,8 @@ if (!isset($_SESSION["user_id"])) {
     ]);
     exit();
 }
-
 $userId = (int)$_SESSION["user_id"];
 $productId = (int)($_POST["product_id"] ?? 0);
-
 if ($productId <= 0) {
     echo json_encode([
         "success" => false,
@@ -24,7 +18,6 @@ if ($productId <= 0) {
     ]);
     exit();
 }
-
 $productStmt = mysqli_prepare(
     $conn,
     "SELECT id
@@ -32,7 +25,6 @@ $productStmt = mysqli_prepare(
      WHERE id = ?
      LIMIT 1"
 );
-
 if (!$productStmt) {
     echo json_encode([
         "success" => false,
@@ -40,25 +32,18 @@ if (!$productStmt) {
     ]);
     exit();
 }
-
 mysqli_stmt_bind_param(
     $productStmt,
     "i",
     $productId
 );
-
 mysqli_stmt_execute($productStmt);
-
 mysqli_stmt_bind_result(
     $productStmt,
     $foundProductId
 );
-
-$productExists =
-    mysqli_stmt_fetch($productStmt);
-
+$productExists=mysqli_stmt_fetch($productStmt);
 mysqli_stmt_close($productStmt);
-
 if (!$productExists) {
     echo json_encode([
         "success" => false,
@@ -66,7 +51,6 @@ if (!$productExists) {
     ]);
     exit();
 }
-
 $checkStmt = mysqli_prepare(
     $conn,
     "SELECT id
@@ -75,7 +59,6 @@ $checkStmt = mysqli_prepare(
        AND product_id = ?
      LIMIT 1"
 );
-
 if (!$checkStmt) {
     echo json_encode([
         "success" => false,
@@ -83,35 +66,26 @@ if (!$checkStmt) {
     ]);
     exit();
 }
-
 mysqli_stmt_bind_param(
     $checkStmt,
     "ii",
     $userId,
     $productId
 );
-
 mysqli_stmt_execute($checkStmt);
-
 mysqli_stmt_bind_result(
     $checkStmt,
     $wishlistId
 );
-
-$isWishlisted =
-    mysqli_stmt_fetch($checkStmt);
-
+$isWishlisted =mysqli_stmt_fetch($checkStmt);
 mysqli_stmt_close($checkStmt);
-
 if ($isWishlisted) {
-
     $deleteStmt = mysqli_prepare(
         $conn,
         "DELETE FROM wishlist
          WHERE user_id = ?
            AND product_id = ?"
     );
-
     if (!$deleteStmt) {
         echo json_encode([
             "success" => false,
@@ -119,34 +93,24 @@ if ($isWishlisted) {
         ]);
         exit();
     }
-
     mysqli_stmt_bind_param(
         $deleteStmt,
         "ii",
         $userId,
         $productId
     );
-
     if (!mysqli_stmt_execute($deleteStmt)) {
-
-        $error =
-            mysqli_stmt_error($deleteStmt);
-
+        $error =mysqli_stmt_error($deleteStmt);
         mysqli_stmt_close($deleteStmt);
-
         echo json_encode([
             "success" => false,
             "message" =>
                 "Unable to remove wishlist: " . $error
         ]);
-
         exit();
     }
-
     mysqli_stmt_close($deleteStmt);
-
     $activityType = "Unlike";
-
     $activityStmt = mysqli_prepare(
         $conn,
         "INSERT INTO user_product_activity
@@ -158,19 +122,15 @@ if ($isWishlisted) {
         )
         VALUES (?, ?, ?, NOW())"
     );
-
     if (!$activityStmt) {
-
         echo json_encode([
             "success" => false,
             "message" =>
                 "Wishlist removed, but activity query failed: " .
                 mysqli_error($conn)
         ]);
-
         exit();
     }
-
     mysqli_stmt_bind_param(
         $activityStmt,
         "iis",
@@ -178,25 +138,17 @@ if ($isWishlisted) {
         $productId,
         $activityType
     );
-
     if (!mysqli_stmt_execute($activityStmt)) {
-
-        $error =
-            mysqli_stmt_error($activityStmt);
-
+        $error=mysqli_stmt_error($activityStmt);
         mysqli_stmt_close($activityStmt);
-
         echo json_encode([
             "success" => false,
             "message" =>
                 "Unlike could not be saved: " . $error
         ]);
-
         exit();
     }
-
     mysqli_stmt_close($activityStmt);
-
     echo json_encode([
         "success" => true,
         "wishlisted" => false,
@@ -204,10 +156,8 @@ if ($isWishlisted) {
         "activity_type" => "Unlike",
         "message" => "Removed from wishlist."
     ]);
-
     exit();
 }
-
 $insertStmt = mysqli_prepare(
     $conn,
     "INSERT INTO wishlist
@@ -217,7 +167,6 @@ $insertStmt = mysqli_prepare(
     )
     VALUES (?, ?)"
 );
-
 if (!$insertStmt) {
     echo json_encode([
         "success" => false,
@@ -225,34 +174,24 @@ if (!$insertStmt) {
     ]);
     exit();
 }
-
 mysqli_stmt_bind_param(
     $insertStmt,
     "ii",
     $userId,
     $productId
 );
-
 if (!mysqli_stmt_execute($insertStmt)) {
-
-    $error =
-        mysqli_stmt_error($insertStmt);
-
+    $error = mysqli_stmt_error($insertStmt);
     mysqli_stmt_close($insertStmt);
-
     echo json_encode([
         "success" => false,
         "message" =>
             "Unable to add wishlist: " . $error
     ]);
-
     exit();
 }
-
 mysqli_stmt_close($insertStmt);
-
 $activityType = "Like";
-
 $activityStmt = mysqli_prepare(
     $conn,
     "INSERT INTO user_product_activity
@@ -264,19 +203,15 @@ $activityStmt = mysqli_prepare(
     )
     VALUES (?, ?, ?, NOW())"
 );
-
 if (!$activityStmt) {
-
     echo json_encode([
         "success" => false,
         "message" =>
             "Wishlist added, but activity query failed: " .
             mysqli_error($conn)
     ]);
-
     exit();
 }
-
 mysqli_stmt_bind_param(
     $activityStmt,
     "iis",
@@ -284,25 +219,17 @@ mysqli_stmt_bind_param(
     $productId,
     $activityType
 );
-
 if (!mysqli_stmt_execute($activityStmt)) {
-
-    $error =
-        mysqli_stmt_error($activityStmt);
-
+    $error=mysqli_stmt_error($activityStmt);
     mysqli_stmt_close($activityStmt);
-
     echo json_encode([
         "success" => false,
         "message" =>
             "Like could not be saved: " . $error
     ]);
-
     exit();
 }
-
 mysqli_stmt_close($activityStmt);
-
 echo json_encode([
     "success" => true,
     "wishlisted" => true,
@@ -310,6 +237,5 @@ echo json_encode([
     "activity_type" => "Like",
     "message" => "Added to wishlist."
 ]);
-
 exit();
 ?>

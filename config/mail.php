@@ -2,7 +2,6 @@
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
 require_once __DIR__ . "/../vendor/autoload.php";
-
 function sendOtpEmail(
     string $email,
     string $otp,
@@ -22,7 +21,6 @@ function sendOtpEmail(
             "Inknest"
         );
         $mail->addAddress($email);
-
         switch ($purpose) {
             case "register":
                 $subject = "Inknest Registration OTP";
@@ -43,7 +41,6 @@ function sendOtpEmail(
                 $subject = "Inknest Verification OTP";
                 break;
         }
-
         $mail->Subject = $subject;
         $mail->isHTML(true);
         $mail->Body = "
@@ -96,3 +93,4 @@ function sendOtpEmail(
         return false;
     }
 }
+?>

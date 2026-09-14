@@ -2,7 +2,6 @@
 session_start();
 include "../config/database.php";
 header("Content-Type: application/json");
-
 if (!isset($_SESSION["admin_id"])) {
     echo json_encode([
         "success" => false,
@@ -10,14 +9,12 @@ if (!isset($_SESSION["admin_id"])) {
     ]);
     exit();
 }
-
 $adminId =(int) $_SESSION["admin_id"];
 $conversationId =
     isset($_POST["conversation_id"])
         ? (int) $_POST["conversation_id"]
         : 0;
 $message =trim($_POST["message"] ?? "");
-
 if ($conversationId <= 0) {
     echo json_encode([
         "success" => false,
@@ -25,7 +22,6 @@ if ($conversationId <= 0) {
     ]);
     exit();
 }
-
 if ($message === "") {
     echo json_encode([
         "success" => false,
@@ -33,7 +29,6 @@ if ($message === "") {
     ]);
     exit();
 }
-
 if (mb_strlen($message) > 2000) {
     echo json_encode([
         "success" => false,
@@ -41,7 +36,6 @@ if (mb_strlen($message) > 2000) {
     ]);
     exit();
 }
-
 $sql = "
     SELECT id, status
     FROM chat_conversations
@@ -60,7 +54,6 @@ mysqli_stmt_bind_result(
     $foundId,
     $status
 );
-
 if (!mysqli_stmt_fetch($stmt)) {
     mysqli_stmt_close($stmt);
     echo json_encode([
@@ -69,7 +62,6 @@ if (!mysqli_stmt_fetch($stmt)) {
     ]);
     exit();
 }
-
 mysqli_stmt_close($stmt);
 if ($status !== "Open") {
     echo json_encode([
@@ -78,7 +70,6 @@ if ($status !== "Open") {
     ]);
     exit();
 }
-
 $sql = "
     INSERT INTO chat_messages
     (
@@ -105,7 +96,6 @@ mysqli_stmt_bind_param(
     $adminId,
     $message
 );
-
 if (!mysqli_stmt_execute($stmt)) {
     mysqli_stmt_close($stmt);
     echo json_encode([
