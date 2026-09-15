@@ -72,6 +72,7 @@ try {
 } catch (Throwable $e) {
     $recommendedProducts = [];
 }
+$notificationRecommendations = $recommendedProducts;
 $search = isset($_GET["search"])
     ? trim($_GET["search"])
     : "";
@@ -144,6 +145,7 @@ if ($search !== "" && $category !== "") {
         }
     }
     mysqli_stmt_close($stmt);
+
 } elseif ($search !== "") {
     $stmt = mysqli_prepare(
         $conn,
@@ -262,7 +264,11 @@ if ($search !== "" && $category !== "") {
     mysqli_free_result($result);
 }
 if ($category !== "") {
-    $recommendedProducts = array_slice($products, 0, 8);
+    $recommendedProducts = array_slice(
+        $products,
+        0,
+        8
+    );
 } elseif ($search !== "") {
     $recommendedProducts = [];
 }
@@ -277,16 +283,15 @@ function renderProductCard(
     $description = $product["description"] ?? "";
     $price = (float) ($product["price"] ?? 0);
     $image = $product["image"] ?? "";
-    $isWishlisted = isset($wishlistProducts[$productId]);
+    $isWishlisted = isset(
+        $wishlistProducts[$productId]
+    );
     $imagePath = "";
     if (!empty($image)) {
-        if (str_starts_with(
-                $image,
-                "images/products/")) {
+        if (str_starts_with($image,"images/products/")) {
             $imagePath = $image;
         } else {
-            $imagePath =
-                "images/products/" . $image;
+            $imagePath="images/products/" . $image;
         }
     }
 ?>
@@ -360,7 +365,9 @@ function renderProductCard(
             <?php if ($stock > 0): ?>
                 <div class="stock available">
                     Available:
-                    <strong><?php echo $stock; ?></strong>
+                    <strong>
+                        <?php echo $stock; ?>
+                    </strong>
                 </div>
             <?php else: ?>
                 <div class="stock out-of-stock">Out of Stock</div>
@@ -409,12 +416,125 @@ function renderProductCard(
             height: 44px;
             margin-left: 0;
         }
+        .notification-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-left: 8px;
+        }
+        .notification-btn {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .notification-btn:hover {
+            opacity: 0.75;
+        }
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 17px;
+            height: 17px;
+            padding: 0 4px;
+            background: #e53935;
+            color: #fff;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 17px;
+        }
+        .notification-dropdown {
+            display: none;
+            position: absolute;
+            top: 48px;
+            right: -10px;
+            width: 320px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .notification-dropdown.show {
+            display: block;
+        }
+        .notification-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid #eee;
+            font-size: 15px;
+        }
+        .notification-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .notification-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 14px;
+            text-decoration: none;
+            color: #111;
+            border-bottom: 1px solid #eee;
+        }
+        .notification-item:hover {
+            background: #f7f7f7;
+        }
+        .notification-item-image {
+            width: 45px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #eee;
+            flex-shrink: 0;
+        }
+        .notification-item-info {
+            min-width: 0;
+        }
+        .notification-item-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .notification-item-category {
+            font-size: 12px;
+            color: #777;
+        }
+        .notification-empty {
+            padding: 20px;
+            text-align: center;
+            color: #777;
+            font-size: 13px;
+        }
         @media (max-width: 900px) {
             .navbar .search {
                 flex-wrap: wrap;
             }
             .navbar .search input {
                 flex: 1 1 220px;
+            }
+        }
+        @media (max-width: 600px) {
+            .notification-dropdown {
+                position: fixed;
+                top: 70px;
+                right: 10px;
+                left: 10px;
+                width: auto;
             }
         }
     </style>
@@ -425,16 +545,24 @@ function renderProductCard(
 <nav class="navbar">
     <h1>Inknest</h1>
     <form class="search" method="GET" action="home.php">
-        <input type="text" name="search" placeholder="Search products..." value="<?php
+        <input type="text" name="search" placeholder="Search products..."
+            value="<?php
                 echo htmlspecialchars(
                     $search,
                     ENT_QUOTES,
                     "UTF-8"
                 );
-            ?>">
+            ?>"
+        >
         <button type="submit">Search</button>
-        <select name="category" class="category-select" aria-label="Filter by category" onchange="this.form.submit()">
-            <option value="">All Categories</option>
+        <select
+            name="category"
+            class="category-select"
+            aria-label="Filter by category"
+            onchange="this.form.submit()">
+            <option value="">
+                All Categories
+            </option>
             <?php foreach ($categories as $categoryName): ?>
                 <option
                     value="<?php
@@ -445,7 +573,10 @@ function renderProductCard(
                         );
                     ?>"
                     <?php
-                    echo strcasecmp(trim($category), trim($categoryName)) === 0
+                    echo strcasecmp(
+                        trim($category),
+                        trim($categoryName)
+                    ) === 0
                         ? "selected"
                         : "";
                     ?>>
@@ -461,7 +592,7 @@ function renderProductCard(
         </select>
     </form>
     <div class="nav-links">
-        <div class="user-info">
+        <div class="user-info" data-user-id="<?php echo $userId; ?>">
             <?php if (!empty($profilePicture)): ?>
                 <img src="images/profile/<?php
                         echo htmlspecialchars(
@@ -500,9 +631,35 @@ function renderProductCard(
                 );
                 ?>
             </span>
+            <div class="notification-wrapper">
+                <button type="button"
+                    class="notification-btn"
+                    id="notificationBtn"
+                    aria-label="New products and recommendations"
+                    aria-expanded="false">
+                    🔔
+                    <span class="notification-badge" id="notificationBadge"
+                        style="display:none;">
+                        0
+                    </span>
+                </button>
+                <div  class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-header">
+                        <strong>
+                            New Items
+                        </strong>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <div class="notification-empty">
+                            No new items
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <a href="profile.php">Manage Profile</a>
-        <a href="cart.php" class="cart">Cart
+        <a href="cart.php" class="cart">
+            Cart
             <span id="cartCount">
                 0
             </span>
@@ -580,9 +737,7 @@ function renderProductCard(
                     Products
                 </h2>
             <?php else: ?>
-                <h2>
-                    Products
-                </h2>
+                <h2>Products</h2>
             <?php endif; ?>
         </div>
         <?php if (!empty($products)): ?>
@@ -615,19 +770,21 @@ function renderProductCard(
         <?php endif; ?>
     </section>
 </main>
-
 <button type="button" class="inknest-chat-button" id="inknestChatButton" aria-label="Open chat">
     💬
     <span class="inknest-chat-badge" id="inknestChatBadge">
         0
     </span>
 </button>
-
 <div class="inknest-chat-box" id="inknestChatBox">
     <div class="inknest-chat-header">
         <div class="inknest-chat-title">
-            <strong>Inknest Support</strong>
-            <span>We are here to help</span>
+            <strong>
+                Inknest Support
+            </strong>
+            <span>
+                We are here to help
+            </span>
         </div>
         <button type="button" class="inknest-chat-close" id="inknestChatClose">x</button>
     </div>
@@ -642,15 +799,308 @@ function renderProductCard(
     </div>
 </div>
 <script src="js/chat.js?v=<?php echo time(); ?>"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const notificationBtn =document.getElementById("notificationBtn");
+    const notificationBadge =document.getElementById("notificationBadge");
+    const notificationDropdown = document.getElementById("notificationDropdown");
+    const notificationList = document.getElementById("notificationList");
+    const userInfo = document.querySelector(".user-info");
+    if (!notificationBtn ||
+        !notificationBadge ||
+        !notificationDropdown ||
+        !notificationList ||
+        !userInfo) {
+        return;
+    }
+    const userId=userInfo.dataset.userId;
+    const productStorageKey ="inknest_last_product_id_" + userId;
+    const recommendationStorageKey ="inknest_seen_recommendations_" + userId;
+    let currentLatestId = 0;
+    let newProductItems = [];
+    let recommendationItems = [];
+    const recommendationData = <?php
+        echo json_encode(
+            array_map(
+                function ($product) {
+                    return [
+                        "id" => (int) (
+                            $product["id"] ?? 0
+                        ),
+                        "product_name" =>$product["product_name"] ?? "",
+                        "category" =>$product["category"] ?? "",
+                        "image" =>$product["image"] ?? ""
+                    ];
+                },
+                $notificationRecommendations
+            ),
+            JSON_HEX_TAG |
+            JSON_HEX_APOS |
+            JSON_HEX_QUOT |
+            JSON_HEX_AMP
+        );
+    ?>;
+    notificationBtn.addEventListener(
+        "click",
+        function (event) {
+            event.stopPropagation();
+            const isOpen =notificationDropdown.classList.toggle("show");
+            notificationBtn.setAttribute(
+                "aria-expanded",
+                isOpen
+                    ? "true"
+                    : "false"
+            );
+            if (isOpen) {
+                if (currentLatestId > 0) {
+                    localStorage.setItem(
+                        productStorageKey,
+                        currentLatestId
+                    );
+                }
+                const recommendationIds =recommendationItems.map(
+                        function (item) {
+                            return String(item.id);
+                        }
+                    );
+                if (recommendationIds.length > 0) {
+                    localStorage.setItem(
+                        recommendationStorageKey,
+                        JSON.stringify(
+                            recommendationIds
+                        )
+                    );
+                }
+                recommendationItems = [];
+                newProductItems = [];
+                updateNotificationBadge();
+            }
+        }
+    );
+    document.addEventListener(
+        "click",
+        function (event) {
+            if (!notificationDropdown.contains(event.target) &&
+                !notificationBtn.contains(event.target)) {
+                notificationDropdown.classList.remove(
+                    "show"
+                );
+                notificationBtn.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+            }
+        }
+    );
+    function escapeHTML(value) {
+        const div =document.createElement("div");
+        div.textContent =value ?? "";
+        return div.innerHTML;
+    }
+    function getSeenRecommendationIds() {
+        try {
+            const stored =localStorage.getItem(recommendationStorageKey);
+            if (!stored) {
+                return [];
+            }
+            const parsed =JSON.parse(stored);
+            return Array.isArray(parsed)
+                ? parsed.map(String)
+                : [];
+        } catch (error) {
+            return [];
+        }
+    }
+    function getUnreadRecommendations() {
+        const seenIds=getSeenRecommendationIds();
+        return recommendationData.filter(
+            function (item) {
+                return (
+                    item.id &&
+                    !seenIds.includes(
+                        String(item.id)
+                    )
+                );
+
+            }
+        );
+    }
+    function updateNotificationBadge() {
+        const totalNotifications =newProductItems.length +recommendationItems.length;
+        if (totalNotifications > 0) {
+            notificationBadge.textContent =
+                totalNotifications > 9
+                    ? "9+"
+                    : totalNotifications;
+            notificationBadge.style.display ="flex";
+        } else {
+            notificationBadge.style.display ="none";
+        }
+    }
+    function createNotificationItem(
+        item,
+        isRecommendation
+    ) {
+        let imageHTML = "";
+        if (item.image) {
+            let imagePath =item.image;
+            if (!imagePath.startsWith("images/products/")) {
+                imagePath ="images/products/" +imagePath;
+            }
+            imageHTML = `
+                <img
+                    src="${escapeHTML(imagePath)}"
+                    class="notification-item-image"
+                    alt=""
+                >
+            `;
+        } else {
+            imageHTML = `
+                <div class="notification-item-image"></div>
+            `;
+        }
+        const link =document.createElement("a");
+        link.href =
+            "product_details.php?id=" +
+            encodeURIComponent(
+                item.id
+            );
+        link.className ="notification-item";
+        const categoryText=isRecommendation
+                ? "Recommended for you"
+                : (
+                    item.category ||
+                    "New Product"
+                );
+        link.innerHTML = `
+            ${imageHTML}
+            <div class="notification-item-info">
+                <div class="notification-item-name">
+                    ${escapeHTML(
+                        item.product_name
+                    )}
+                </div>
+                <div class="notification-item-category">
+                    ${escapeHTML(
+                        categoryText
+                    )}
+                </div>
+            </div>
+        `;
+        return link;
+    }
+    function renderNotifications() {
+        notificationList.innerHTML = "";
+        if (recommendationItems.length === 0 && newProductItems.length === 0) {
+            notificationList.innerHTML = `
+                <div class="notification-empty">
+                    No new items
+                </div>
+            `;
+            return;
+        }
+        recommendationItems.forEach(
+            function (item) {
+                notificationList.appendChild(
+                    createNotificationItem(
+                        item,
+                        true
+                    )
+                );
+            }
+        );
+        newProductItems.forEach(
+            function (item) {
+                notificationList.appendChild(
+                    createNotificationItem(
+                        item,
+                        false
+                    )
+                );
+            }
+        );
+    }
+    function loadNotifications() {
+        const lastId =parseInt(
+                localStorage.getItem(
+                    productStorageKey
+                ) || "0",
+                10
+            );
+        recommendationItems=getUnreadRecommendations();
+        fetch(
+            "new_items.php?last_id=" +
+            lastId,
+            {
+                method: "GET",
+                cache: "no-store"
+            }
+        )
+        .then(
+            function (response) {
+                return response.json();
+            }
+        )
+        .then(
+            function (data) {
+                if (!data.success) {
+                    newProductItems = [];
+                    renderNotifications();
+                    updateNotificationBadge();
+                    return;
+                }
+                currentLatestId =parseInt(
+                        data.latest_id || 0,
+                        10
+                    );
+                if (lastId === 0 && currentLatestId > 0) {
+                    localStorage.setItem(
+                        productStorageKey,
+                        currentLatestId
+                    );
+                    newProductItems = [];
+                } else {
+                    newProductItems =data.new_items || [];
+                }
+                recommendationItems=getUnreadRecommendations();
+                renderNotifications();
+                updateNotificationBadge();
+            }
+        )
+        .catch(
+            function (error) {
+                console.error(
+                    "Notification error:",
+                    error
+                );
+                recommendationItems=getUnreadRecommendations();
+                renderNotifications();
+                updateNotificationBadge();
+            }
+        );
+    }
+    loadNotifications();
+    setInterval(
+        loadNotifications,
+        30000
+    );
+});
+</script>
 <footer class="footer">
     <div class="footer-content">
         <div class="footer-brand">
-            <h2>Inknest</h2>
-            <p>Your trusted online shopping destination.</p>
+            <h2>
+                Inknest
+            </h2>
+            <p>
+                Your trusted online shopping destination.
+            </p>
         </div>
         <div class="footer-links">
             <div class="footer-contact">
-                <h3>Contact Us</h3>
+                <h3>
+                    Contact Us
+                </h3>
                 <p>
                     <strong>
                         Phone:
@@ -678,9 +1128,9 @@ function renderProductCard(
             <?php echo date("Y"); ?>
             Inknest.
             All rights reserved.
+
         </p>
     </div>
 </footer>
 </body>
 </html>
-
