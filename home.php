@@ -6,6 +6,8 @@ header("Pragma: no-cache");
 header("Expires: 0");
 include "config/database.php";
 require_once "config/recommendation.php";
+require_once "config/sorting.php";
+require_once "config/searching.php";
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
@@ -95,174 +97,13 @@ if ($categoryResult) {
     }
     mysqli_free_result($categoryResult);
 }
-$products = [];
-if ($search !== "" && $category !== "") {
-    $stmt = mysqli_prepare(
-        $conn,
-        "SELECT
-            id,
-            product_name,
-            category,
-            description,
-            price,
-            image,
-            stock
-         FROM products
-         WHERE is_deleted = 0
-           AND LOWER(TRIM(category)) = LOWER(TRIM(?))
-           AND (
-                product_name LIKE ?
-                OR description LIKE ?
-                OR category LIKE ?
-           )
-         ORDER BY id DESC
-         LIMIT 50"
-    );
-    if (!$stmt) {
-        die(
-            "Product query failed: " .
-            htmlspecialchars(
-                mysqli_error($conn),
-                ENT_QUOTES,
-                "UTF-8"
-            )
-        );
-    }
-    $searchTerm = "%" . $search . "%";
-    mysqli_stmt_bind_param(
-        $stmt,
-        "ssss",
-        $category,
-        $searchTerm,
-        $searchTerm,
-        $searchTerm
-    );
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    if ($result) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $products[] = $row;
-        }
-    }
-    mysqli_stmt_close($stmt);
-
-} elseif ($search !== "") {
-    $stmt = mysqli_prepare(
-        $conn,
-        "SELECT
-            id,
-            product_name,
-            category,
-            description,
-            price,
-            image,
-            stock
-         FROM products
-         WHERE is_deleted = 0
-           AND (
-                product_name LIKE ?
-                OR description LIKE ?
-                OR category LIKE ?
-           )
-         ORDER BY id DESC
-         LIMIT 50"
-    );
-    if (!$stmt) {
-        die(
-            "Search query failed: " .
-            htmlspecialchars(
-                mysqli_error($conn),
-                ENT_QUOTES,
-                "UTF-8"
-            )
-        );
-    }
-    $searchTerm = "%" . $search . "%";
-    mysqli_stmt_bind_param(
-        $stmt,
-        "sss",
-        $searchTerm,
-        $searchTerm,
-        $searchTerm
-    );
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    if ($result) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $products[] = $row;
-        }
-    }
-    mysqli_stmt_close($stmt);
-} elseif ($category !== "") {
-    $stmt = mysqli_prepare(
-        $conn,
-        "SELECT
-            id,
-            product_name,
-            category,
-            description,
-            price,
-            image,
-            stock
-         FROM products
-         WHERE is_deleted = 0
-           AND LOWER(TRIM(category)) = LOWER(TRIM(?))
-         ORDER BY id DESC
-         LIMIT 50"
-    );
-    if (!$stmt) {
-        die(
-            "Category query failed: " .
-            htmlspecialchars(
-                mysqli_error($conn),
-                ENT_QUOTES,
-                "UTF-8"
-            )
-        );
-    }
-    mysqli_stmt_bind_param(
-        $stmt,
-        "s",
-        $category
-    );
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    if ($result) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $products[] = $row;
-        }
-    }
-    mysqli_stmt_close($stmt);
-} else {
-    $result = mysqli_query(
-        $conn,
-        "SELECT
-            id,
-            product_name,
-            category,
-            description,
-            price,
-            image,
-            stock
-         FROM products
-         WHERE is_deleted = 0
-         ORDER BY id DESC"
-    );
-    if (!$result) {
-        die(
-            "Product query failed: " .
-            htmlspecialchars(
-                mysqli_error($conn),
-                ENT_QUOTES,
-                "UTF-8"
-            )
-        );
-    }
-    while ($row = mysqli_fetch_assoc($result)) {
-        $products[] = $row;
-    }
-    mysqli_free_result($result);
-}
+$products = searchProducts(
+    $conn,
+    $search,
+    $category,
+    $orderBy,
+    50
+);
 if ($category !== "") {
     $recommendedProducts = array_slice(
         $products,
@@ -288,10 +129,10 @@ function renderProductCard(
     );
     $imagePath = "";
     if (!empty($image)) {
-        if (str_starts_with($image,"images/products/")) {
+        if (str_starts_with($image, "images/products/")) {
             $imagePath = $image;
         } else {
-            $imagePath="images/products/" . $image;
+            $imagePath = "images/products/" . $image;
         }
     }
 ?>
@@ -370,7 +211,9 @@ function renderProductCard(
                     </strong>
                 </div>
             <?php else: ?>
-                <div class="stock out-of-stock">Out of Stock</div>
+                <div class="stock out-of-stock">
+                    Out of Stock
+                </div>
             <?php endif; ?>
         </div>
         <div class="product-actions">
@@ -382,9 +225,11 @@ function renderProductCard(
                 ?>
             </button>
             <?php if ($stock > 0): ?>
-                <button type="button" class="add-cart" data-id="<?php echo $productId; ?>">Add to Cart</button>
+                <button type="button" class="add-cart" data-id="<?php echo $productId; ?>">
+                    Add to Cart
+                </button>
             <?php else: ?>
-                <button type="button" class="add-cart disabled" disabled>Out of Stock</button>
+                <button type="button" class="add-cart disabled"  disabled>Out of Stock</button>
             <?php endif; ?>
         </div>
     </div>
@@ -400,21 +245,52 @@ function renderProductCard(
     <title>Home | Inknest</title>
     <link rel="stylesheet" href="css/home.css?v=<?php echo time(); ?>">
     <style>
+        .filter-area {
+            display: flex;
+            align-items: center;
+            width: 620px;
+            max-width: 100%;
+            margin-top: 18px;
+            margin-bottom: 30px;
+        }
+        .filter-area select {
+            height: 44px;
+            box-sizing: border-box;
+            background: #fff;
+            font-size: 16px;
+            padding: 0 18px;
+            cursor: pointer;
+            outline: none;
+        }
+        .filter-area .category-select {
+            width: 50%;
+            border: 1px solid #aaa;
+            border-radius: 7px 0 0 7px;
+        }
+        .filter-area .sort-select {
+            width: 50%;
+            border: 1px solid #aaa;
+            border-left: none;
+            border-radius: 0 7px 7px 0;
+        }
         .navbar .search {
             display: flex;
             align-items: center;
             gap: 0;
+            flex: 1;
+            max-width: 760px;
         }
         .navbar .search input {
-            min-width: 0;
+            flex: 1;
+            min-width: 180px;
+            height: 44px;
+            box-sizing: border-box;
         }
         .navbar .search button {
             order: 2;
-        }
-        .navbar .search .category-select {
-            order: 3;
             height: 44px;
-            margin-left: 0;
+            min-width: 102px;
+            box-sizing: border-box;
         }
         .notification-wrapper {
             position: relative;
@@ -527,8 +403,23 @@ function renderProductCard(
             .navbar .search input {
                 flex: 1 1 220px;
             }
+            .filter-area {
+                width: 100%;
+            }
         }
         @media (max-width: 600px) {
+            .filter-area {
+                flex-direction: column;
+            }
+            .filter-area .category-select,
+            .filter-area .sort-select {
+                width: 100%;
+                border: 1px solid #aaa;
+                border-radius: 7px;
+            }
+            .filter-area .sort-select {
+                margin-top: 8px;
+            }
             .notification-dropdown {
                 position: fixed;
                 top: 70px;
@@ -552,44 +443,8 @@ function renderProductCard(
                     ENT_QUOTES,
                     "UTF-8"
                 );
-            ?>"
-        >
+            ?>">
         <button type="submit">Search</button>
-        <select
-            name="category"
-            class="category-select"
-            aria-label="Filter by category"
-            onchange="this.form.submit()">
-            <option value="">
-                All Categories
-            </option>
-            <?php foreach ($categories as $categoryName): ?>
-                <option
-                    value="<?php
-                        echo htmlspecialchars(
-                            $categoryName,
-                            ENT_QUOTES,
-                            "UTF-8"
-                        );
-                    ?>"
-                    <?php
-                    echo strcasecmp(
-                        trim($category),
-                        trim($categoryName)
-                    ) === 0
-                        ? "selected"
-                        : "";
-                    ?>>
-                    <?php
-                    echo htmlspecialchars(
-                        $categoryName,
-                        ENT_QUOTES,
-                        "UTF-8"
-                    );
-                    ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
     </form>
     <div class="nav-links">
         <div class="user-info" data-user-id="<?php echo $userId; ?>">
@@ -632,18 +487,13 @@ function renderProductCard(
                 ?>
             </span>
             <div class="notification-wrapper">
-                <button type="button"
-                    class="notification-btn"
-                    id="notificationBtn"
-                    aria-label="New products and recommendations"
-                    aria-expanded="false">
+                <button type="button" class="notification-btn" id="notificationBtn" aria-label="New products and recommendations" aria-expanded="false">
                     🔔
-                    <span class="notification-badge" id="notificationBadge"
-                        style="display:none;">
+                    <span class="notification-badge" id="notificationBadge" style="display:none;">
                         0
                     </span>
                 </button>
-                <div  class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-dropdown" id="notificationDropdown">
                     <div class="notification-header">
                         <strong>
                             New Items
@@ -676,11 +526,105 @@ function renderProductCard(
             <div class="heading">
                 <h2>Recommended for You</h2>
             </div>
+            <form class="filter-area" method="GET" action="home.php">
+                <input type="hidden" name="search" value="<?php
+                        echo htmlspecialchars(
+                            $search,
+                            ENT_QUOTES,
+                            "UTF-8"
+                        );
+                    ?>">
+                <select name="category" class="category-select" onchange="this.form.submit()">
+                    <option value="">
+                        All Categories
+                    </option>
+                    <?php foreach ($categories as $categoryName): ?>
+                        <option
+                            value="<?php
+                                echo htmlspecialchars(
+                                    $categoryName,
+                                    ENT_QUOTES,
+                                    "UTF-8"
+                                );
+                            ?>"
+                            <?php
+                            echo strcasecmp(
+                                trim($category),
+                                trim($categoryName)
+                            ) === 0
+                                ? "selected"
+                                : "";
+                            ?>
+                        >
+                            <?php
+                            echo htmlspecialchars(
+                                $categoryName,
+                                ENT_QUOTES,
+                                "UTF-8"
+                            );
+                            ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <select name="sort" class="sort-select" onchange="this.form.submit()">
+                    <option
+                        value="newest"
+                        <?php
+                        echo $sort === "newest"
+                            ? "selected"
+                            : "";
+                        ?>>
+                        Newest
+                    </option>
+                    <option
+                        value="oldest"
+                        <?php
+                        echo $sort === "oldest"
+                            ? "selected"
+                            : "";
+                        ?>>
+                        Oldest
+                    </option>
+                    <option
+                        value="price_low"
+                        <?php
+                        echo $sort === "price_low"
+                            ? "selected"
+                            : "";
+                        ?>>
+                        Price: Low to High
+                    </option>
+                    <option
+                        value="price_high"
+                        <?php
+                        echo $sort === "price_high"
+                            ? "selected"
+                            : "";
+                        ?>>
+                        Price: High to Low
+                    </option>
+                    <option
+                        value="name_az"
+                        <?php
+                        echo $sort === "name_az"
+                            ? "selected"
+                            : "";
+                        ?>>
+                        Name: A to Z
+                    </option>
+                    <option
+                        value="name_za"
+                        <?php
+                        echo $sort === "name_za"
+                            ? "selected"
+                            : "";
+                        ?>>
+                        Name: Z to A
+                    </option>
+                </select>
+            </form>
             <div class="product-grid">
-                <?php foreach (
-                    $recommendedProducts
-                    as $product
-                ): ?>
+                <?php foreach ($recommendedProducts as $product): ?>
                     <?php
                     renderProductCard(
                         $product,
@@ -740,12 +684,104 @@ function renderProductCard(
                 <h2>Products</h2>
             <?php endif; ?>
         </div>
+        <form class="filter-area" method="GET" action="home.php">
+            <input type="hidden" name="search"
+                value="<?php
+                    echo htmlspecialchars(
+                        $search,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
+                ?>">
+            <select name="category" class="category-select" onchange="this.form.submit()">
+                <option value="">
+                    All Categories
+                </option>
+                <?php foreach ($categories as $categoryName): ?>
+                    <option
+                        value="<?php
+                            echo htmlspecialchars(
+                                $categoryName,
+                                ENT_QUOTES,
+                                "UTF-8"
+                            );
+                        ?>"
+                        <?php
+                        echo strcasecmp(
+                            trim($category),
+                            trim($categoryName)
+                        ) === 0
+                            ? "selected"
+                            : "";
+                        ?>>
+                        <?php
+                        echo htmlspecialchars(
+                            $categoryName,
+                            ENT_QUOTES,
+                            "UTF-8"
+                        );
+                        ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <select name="sort" class="sort-select" onchange="this.form.submit()">
+                <option
+                    value="newest"
+                    <?php
+                    echo $sort === "newest"
+                        ? "selected"
+                        : "";
+                    ?>>Newest
+                </option>
+                <option
+                    value="oldest"
+                    <?php
+                    echo $sort === "oldest"
+                        ? "selected"
+                        : "";
+                    ?>>Oldest
+                </option>
+                <option
+                    value="price_low"
+                    <?php
+                    echo $sort === "price_low"
+                        ? "selected"
+                        : "";
+                    ?>>
+                    Price: Low to High
+                </option>
+                <option
+                    value="price_high"
+                    <?php
+                    echo $sort === "price_high"
+                        ? "selected"
+                        : "";
+                    ?>>
+                    Price: High to Low
+                </option>
+                <option
+                    value="name_az"
+                    <?php
+                    echo $sort === "name_az"
+                        ? "selected"
+                        : "";
+                    ?>>
+                    Name: A to Z
+                </option>
+                <option
+                    value="name_za"
+                    <?php
+                    echo $sort === "name_za"
+                        ? "selected"
+                        : "";
+                    ?>>
+                    Name: Z to A
+                </option>
+            </select>
+        </form>
         <?php if (!empty($products)): ?>
             <div class="product-grid">
-                <?php foreach (
-                    $products
-                    as $product
-                ): ?>
+                <?php foreach ($products as $product): ?>
                     <?php
                     renderProductCard(
                         $product,
@@ -786,305 +822,313 @@ function renderProductCard(
                 We are here to help
             </span>
         </div>
-        <button type="button" class="inknest-chat-close" id="inknestChatClose">x</button>
+        <button type="button" class="inknest-chat-close" id="inknestChatClose">
+            x
+        </button>
     </div>
+
     <div class="inknest-chat-messages" id="inknestChatMessages">
         <div class="inknest-chat-empty">
             Loading chat...
         </div>
     </div>
     <div class="inknest-chat-input-area">
-        <input type="text" id="inknestChatInput" class="inknest-chat-input" placeholder="Type a message..." maxlength="2000" autocomplete="off">
-        <button type="button" id="inknestChatSend" class="inknest-chat-send">➤</button>
+        <input type="text" id="inknestChatInput"
+            class="inknest-chat-input"
+            placeholder="Type a message..."
+            maxlength="2000"
+            autocomplete="off">
+        <button type="button" id="inknestChatSend" class="inknest-chat-send">
+            ➤
+        </button>
     </div>
 </div>
 <script src="js/chat.js?v=<?php echo time(); ?>"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const notificationBtn =document.getElementById("notificationBtn");
-    const notificationBadge =document.getElementById("notificationBadge");
-    const notificationDropdown = document.getElementById("notificationDropdown");
-    const notificationList = document.getElementById("notificationList");
-    const userInfo = document.querySelector(".user-info");
-    if (!notificationBtn ||
-        !notificationBadge ||
-        !notificationDropdown ||
-        !notificationList ||
-        !userInfo) {
-        return;
-    }
-    const userId=userInfo.dataset.userId;
-    const productStorageKey ="inknest_last_product_id_" + userId;
-    const recommendationStorageKey ="inknest_seen_recommendations_" + userId;
-    let currentLatestId = 0;
-    let newProductItems = [];
-    let recommendationItems = [];
-    const recommendationData = <?php
-        echo json_encode(
-            array_map(
-                function ($product) {
-                    return [
-                        "id" => (int) (
-                            $product["id"] ?? 0
-                        ),
-                        "product_name" =>$product["product_name"] ?? "",
-                        "category" =>$product["category"] ?? "",
-                        "image" =>$product["image"] ?? ""
-                    ];
-                },
-                $notificationRecommendations
-            ),
-            JSON_HEX_TAG |
-            JSON_HEX_APOS |
-            JSON_HEX_QUOT |
-            JSON_HEX_AMP
-        );
-    ?>;
-    notificationBtn.addEventListener(
-        "click",
-        function (event) {
-            event.stopPropagation();
-            const isOpen =notificationDropdown.classList.toggle("show");
-            notificationBtn.setAttribute(
-                "aria-expanded",
-                isOpen
-                    ? "true"
-                    : "false"
+document.addEventListener("DOMContentLoaded",
+    function () {
+        const notificationBtn=document.getElementById("notificationBtn");
+        const notificationBadge=document.getElementById("notificationBadge");
+        const notificationDropdown=document.getElementById("notificationDropdown");
+        const notificationList=document.getElementById("notificationList");
+        const userInfo=document.querySelector(".user-info");
+        if (!notificationBtn ||
+            !notificationBadge ||
+            !notificationDropdown ||
+            !notificationList ||
+            !userInfo) {
+            return;
+        }
+        const userId=userInfo.dataset.userId;
+        const productStorageKey="inknest_last_product_id_" +userId;
+        const recommendationStorageKey="inknest_seen_recommendations_" +userId;
+        let currentLatestId = 0;
+        let newProductItems = [];
+        let recommendationItems = [];
+        const recommendationData =
+            <?php
+            echo json_encode(
+                array_map(
+                    function ($product) {
+                        return [
+                            "id"=>(int) ($product["id"] ?? 0),
+                            "product_name"=>$product["product_name"] ?? "",
+                            "category"=>$product["category"] ?? "",
+                            "image"=>$product["image"] ?? ""
+                        ];
+                    },
+                    $notificationRecommendations
+                ),
+                JSON_HEX_TAG |
+                JSON_HEX_APOS |
+                JSON_HEX_QUOT |
+                JSON_HEX_AMP
             );
-            if (isOpen) {
-                if (currentLatestId > 0) {
-                    localStorage.setItem(
-                        productStorageKey,
-                        currentLatestId
+            ?>;
+        notificationBtn.addEventListener(
+            "click",
+            function (event) {
+                event.stopPropagation();
+                const isOpen =notificationDropdown.classList.toggle(
+                        "show"
+                    );
+                notificationBtn.setAttribute(
+                    "aria-expanded",
+                    isOpen
+                        ? "true"
+                        : "false"
+                );
+                if (isOpen) {
+                    if (currentLatestId > 0) {
+                        localStorage.setItem(
+                            productStorageKey,
+                            currentLatestId
+                        );
+                    }
+                    const recommendationIds=recommendationItems.map(
+                            function (item) {
+                                return String(
+                                    item.id
+                                );
+                            }
+                        );
+                    if (recommendationIds.length > 0) {
+                        localStorage.setItem(
+                            recommendationStorageKey,
+                            JSON.stringify(
+                                recommendationIds
+                            )
+                        );
+                    }
+                    recommendationItems = [];
+                    newProductItems = [];
+                    updateNotificationBadge();
+                }
+            }
+        );
+        document.addEventListener(
+            "click",
+            function (event) {
+                if (!notificationDropdown.contains(event.target) &&!notificationBtn.contains(event.target)) {
+                    notificationDropdown.classList.remove(
+                        "show"
+                    );
+                    notificationBtn.setAttribute(
+                        "aria-expanded",
+                        "false"
                     );
                 }
-                const recommendationIds =recommendationItems.map(
-                        function (item) {
-                            return String(item.id);
-                        }
-                    );
-                if (recommendationIds.length > 0) {
-                    localStorage.setItem(
-                        recommendationStorageKey,
-                        JSON.stringify(
-                            recommendationIds
+            }
+        );
+        function escapeHTML(value) {
+            const div=document.createElement("div");
+            div.textContent=value ?? "";
+            return div.innerHTML;
+        }
+        function getSeenRecommendationIds() {
+            try {
+                const stored=localStorage.getItem(recommendationStorageKey);
+                if (!stored) {
+                    return [];
+                }
+                const parsed=JSON.parse(stored);
+                return Array.isArray(parsed)
+                    ? parsed.map(String)
+                    : [];
+            } catch (error) {
+                return [];
+            }
+        }
+        function getUnreadRecommendations() {
+            const seenIds=getSeenRecommendationIds();
+            return recommendationData.filter(
+                function (item) {
+                    return (
+                        item.id &&
+                        !seenIds.includes(
+                            String(item.id)
                         )
                     );
                 }
-                recommendationItems = [];
-                newProductItems = [];
-                updateNotificationBadge();
-            }
-        }
-    );
-    document.addEventListener(
-        "click",
-        function (event) {
-            if (!notificationDropdown.contains(event.target) &&
-                !notificationBtn.contains(event.target)) {
-                notificationDropdown.classList.remove(
-                    "show"
-                );
-                notificationBtn.setAttribute(
-                    "aria-expanded",
-                    "false"
-                );
-            }
-        }
-    );
-    function escapeHTML(value) {
-        const div =document.createElement("div");
-        div.textContent =value ?? "";
-        return div.innerHTML;
-    }
-    function getSeenRecommendationIds() {
-        try {
-            const stored =localStorage.getItem(recommendationStorageKey);
-            if (!stored) {
-                return [];
-            }
-            const parsed =JSON.parse(stored);
-            return Array.isArray(parsed)
-                ? parsed.map(String)
-                : [];
-        } catch (error) {
-            return [];
-        }
-    }
-    function getUnreadRecommendations() {
-        const seenIds=getSeenRecommendationIds();
-        return recommendationData.filter(
-            function (item) {
-                return (
-                    item.id &&
-                    !seenIds.includes(
-                        String(item.id)
-                    )
-                );
-
-            }
-        );
-    }
-    function updateNotificationBadge() {
-        const totalNotifications =newProductItems.length +recommendationItems.length;
-        if (totalNotifications > 0) {
-            notificationBadge.textContent =
-                totalNotifications > 9
-                    ? "9+"
-                    : totalNotifications;
-            notificationBadge.style.display ="flex";
-        } else {
-            notificationBadge.style.display ="none";
-        }
-    }
-    function createNotificationItem(
-        item,
-        isRecommendation
-    ) {
-        let imageHTML = "";
-        if (item.image) {
-            let imagePath =item.image;
-            if (!imagePath.startsWith("images/products/")) {
-                imagePath ="images/products/" +imagePath;
-            }
-            imageHTML = `
-                <img
-                    src="${escapeHTML(imagePath)}"
-                    class="notification-item-image"
-                    alt=""
-                >
-            `;
-        } else {
-            imageHTML = `
-                <div class="notification-item-image"></div>
-            `;
-        }
-        const link =document.createElement("a");
-        link.href =
-            "product_details.php?id=" +
-            encodeURIComponent(
-                item.id
             );
-        link.className ="notification-item";
-        const categoryText=isRecommendation
-                ? "Recommended for you"
-                : (
-                    item.category ||
-                    "New Product"
+        }
+        function updateNotificationBadge() {
+            const totalNotifications=newProductItems.length +recommendationItems.length;
+            if (totalNotifications > 0) {
+                notificationBadge.textContent =
+                    totalNotifications > 9
+                        ? "9+"
+                        : totalNotifications;
+                notificationBadge.style.display="flex";
+            } else {
+                notificationBadge.style.display="none";
+            }
+        }
+        function createNotificationItem(
+            item,
+            isRecommendation
+        ) {
+            let imageHTML = "";
+            if (item.image) {
+                let imagePath=item.image;
+                if (!imagePath.startsWith("images/products/")) {
+                    imagePath ="images/products/" +imagePath;
+                }
+                imageHTML = `
+                    <img
+                        src="${escapeHTML(imagePath)}"
+                        class="notification-item-image"
+                        alt=""
+                    >
+                `;
+            } else {
+                imageHTML = `
+                    <div class="notification-item-image"></div>
+                `;
+            }
+            const link=document.createElement("a");
+            link.href ="product_details.php?id=" +
+                encodeURIComponent(
+                    item.id
                 );
-        link.innerHTML = `
-            ${imageHTML}
-            <div class="notification-item-info">
-                <div class="notification-item-name">
-                    ${escapeHTML(
-                        item.product_name
-                    )}
-                </div>
-                <div class="notification-item-category">
-                    ${escapeHTML(
-                        categoryText
-                    )}
-                </div>
-            </div>
-        `;
-        return link;
-    }
-    function renderNotifications() {
-        notificationList.innerHTML = "";
-        if (recommendationItems.length === 0 && newProductItems.length === 0) {
-            notificationList.innerHTML = `
-                <div class="notification-empty">
-                    No new items
+            link.className="notification-item";
+            const categoryText=isRecommendation
+                    ? "Recommended for you"
+                    : (
+                        item.category ||
+                        "New Product"
+                    );
+            link.innerHTML = `
+                ${imageHTML}
+                <div class="notification-item-info">
+                    <div class="notification-item-name">
+                        ${escapeHTML(
+                            item.product_name
+                        )}
+                    </div>
+                    <div class="notification-item-category">
+                        ${escapeHTML(
+                            categoryText
+                        )}
+                    </div>
                 </div>
             `;
-            return;
+            return link;
         }
-        recommendationItems.forEach(
-            function (item) {
-                notificationList.appendChild(
-                    createNotificationItem(
-                        item,
-                        true
-                    )
-                );
+        function renderNotifications() {
+            notificationList.innerHTML = "";
+            if (recommendationItems.length === 0 && newProductItems.length === 0) {
+                notificationList.innerHTML = `
+                    <div class="notification-empty">
+                        No new items
+                    </div>
+                `;
+                return;
             }
-        );
-        newProductItems.forEach(
-            function (item) {
-                notificationList.appendChild(
-                    createNotificationItem(
-                        item,
-                        false
-                    )
-                );
-            }
-        );
-    }
-    function loadNotifications() {
-        const lastId =parseInt(
-                localStorage.getItem(
-                    productStorageKey
-                ) || "0",
-                10
+            recommendationItems.forEach(
+                function (item) {
+                    notificationList.appendChild(
+                        createNotificationItem(
+                            item,
+                            true
+                        )
+                    );
+                }
             );
-        recommendationItems=getUnreadRecommendations();
-        fetch(
-            "new_items.php?last_id=" +
-            lastId,
-            {
-                method: "GET",
-                cache: "no-store"
-            }
-        )
-        .then(
-            function (response) {
-                return response.json();
-            }
-        )
-        .then(
-            function (data) {
-                if (!data.success) {
-                    newProductItems = [];
+            newProductItems.forEach(
+                function (item) {
+                    notificationList.appendChild(
+                        createNotificationItem(
+                            item,
+                            false
+                        )
+                    );
+                }
+            );
+        }
+        function loadNotifications() {
+            const lastId=parseInt(
+                    localStorage.getItem(
+                        productStorageKey
+                    ) || "0",
+                    10
+                );
+            recommendationItems=getUnreadRecommendations();
+            fetch(
+                "new_items.php?last_id=" +
+                lastId,
+                {
+                    method: "GET",
+                    cache: "no-store"
+                }
+            )
+            .then(
+                function (response) {
+                    return response.json();
+                }
+            )
+            .then(
+                function (data) {
+                    if (!data.success) {
+                        newProductItems = [];
+                        renderNotifications();
+                        updateNotificationBadge();
+                        return;
+                    }
+                    currentLatestId=parseInt(
+                            data.latest_id || 0,
+                            10
+                        );
+                    if (lastId === 0 && currentLatestId > 0) {
+                        localStorage.setItem(
+                            productStorageKey,
+                            currentLatestId
+                        );
+                        newProductItems=[];
+                    } else {
+                        newProductItems=data.new_items || [];
+                    }
+                    recommendationItems=getUnreadRecommendations();
                     renderNotifications();
                     updateNotificationBadge();
-                    return;
                 }
-                currentLatestId =parseInt(
-                        data.latest_id || 0,
-                        10
-                    );
-                if (lastId === 0 && currentLatestId > 0) {
-                    localStorage.setItem(
-                        productStorageKey,
-                        currentLatestId
-                    );
-                    newProductItems = [];
-                } else {
-                    newProductItems =data.new_items || [];
+            )
+            .catch(
+                function () {
+                    recommendationItems=getUnreadRecommendations();
+                    renderNotifications();
+                    updateNotificationBadge();
+
                 }
-                recommendationItems=getUnreadRecommendations();
-                renderNotifications();
-                updateNotificationBadge();
-            }
-        )
-        .catch(
-            function (error) {
-                console.error(
-                    "Notification error:",
-                    error
-                );
-                recommendationItems=getUnreadRecommendations();
-                renderNotifications();
-                updateNotificationBadge();
-            }
+            );
+        }
+        loadNotifications();
+        setInterval(
+            loadNotifications,
+            30000
         );
     }
-    loadNotifications();
-    setInterval(
-        loadNotifications,
-        30000
-    );
-});
+);
 </script>
 <footer class="footer">
     <div class="footer-content">
@@ -1128,7 +1172,6 @@ document.addEventListener("DOMContentLoaded", function () {
             <?php echo date("Y"); ?>
             Inknest.
             All rights reserved.
-
         </p>
     </div>
 </footer>
