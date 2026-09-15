@@ -1,14 +1,11 @@
 <?php
-
 function getRecommendedProducts(
     mysqli $conn,
     int $userId,
     int $limit = 8,
     string $search = ""
 ): array {
-
     $products = [];
-
     $productSql = "
         SELECT
             id,
@@ -22,16 +19,13 @@ function getRecommendedProducts(
         WHERE stock > 0
           AND is_deleted = 0
     ";
-
     $productResult = mysqli_query(
         $conn,
         $productSql
     );
-
     if (!$productResult) {
         return [];
     }
-
     while ($row = mysqli_fetch_assoc($productResult)) {
         $productId = (int) $row["id"];
         $products[$productId] = [
@@ -52,28 +46,22 @@ function getRecommendedProducts(
             "final_score" => 0
         ];
     }
-
     mysqli_free_result($productResult);
 
     if (empty($products)) {
         return [];
     }
-
     $normalizeText = function (string $text): array {
-
         $text = strtolower($text);
-
         $text = preg_replace(
             '/[^a-z0-9\s]/i',
             ' ',
             $text
         );
-
         $words = preg_split(
             '/\s+/',
             trim($text)
         );
-
         $stopWords = [
             "the",
             "and",
@@ -98,14 +86,9 @@ function getRecommendedProducts(
             "product",
             "products"
         ];
-
         $result = [];
-
         foreach ($words as $word) {
-
-            if (
-                strlen($word) >= 2 &&
-                !in_array(
+            if (strlen($word) >= 2 &&!in_array(
                     $word,
                     $stopWords,
                     true
@@ -114,32 +97,23 @@ function getRecommendedProducts(
                 $result[$word] = true;
             }
         }
-
         return array_keys($result);
     };
-
     $calculateSimilarity = function (
         array $a,
         array $b
     ): float {
-
-        if (
-            empty($a) ||
-            empty($b)
-        ) {
+        if (empty($a) || empty($b)) {
             return 0;
         }
-
         $a = array_unique($a);
         $b = array_unique($b);
-
         $intersection = count(
             array_intersect(
                 $a,
                 $b
             )
         );
-
         $union = count(
             array_unique(
                 array_merge(
@@ -148,14 +122,11 @@ function getRecommendedProducts(
                 )
             )
         );
-
         if ($union === 0) {
             return 0;
         }
-
         return $intersection / $union;
     };
-
     $ratingSql = "
         SELECT
             product_id,
@@ -164,14 +135,11 @@ function getRecommendedProducts(
         FROM product_reviews
         GROUP BY product_id
     ";
-
     $ratingResult = mysqli_query(
         $conn,
         $ratingSql
     );
-
     $globalRating = 0;
-
     $globalRatingSql = mysqli_query(
         $conn,
         "
@@ -179,50 +147,31 @@ function getRecommendedProducts(
         FROM product_reviews
         "
     );
-
     if ($globalRatingSql) {
-
         $globalRow = mysqli_fetch_assoc(
             $globalRatingSql
         );
-
         $globalRating = (float) (
             $globalRow["global_rating"] ?? 0
         );
-
         mysqli_free_result(
             $globalRatingSql
         );
     }
-
     if ($globalRating <= 0) {
         $globalRating = 3;
     }
-
     $minimumReviews = 3;
-
     if ($ratingResult) {
-
-        while (
-            $row = mysqli_fetch_assoc(
-                $ratingResult
-            )
-        ) {
-
+        while ($row = mysqli_fetch_assoc($ratingResult)) {
             $productId = (int) $row["product_id"];
-
             if (!isset($products[$productId])) {
                 continue;
             }
-
-            $reviewCount = (int) (
-                $row["review_count"] ?? 0
-            );
-
+            $reviewCount = (int) ($row["review_count"] ?? 0);
             $averageRating = (float) (
                 $row["average_rating"] ?? 0
             );
-
             $bayesianRating =
                 (
                     (
@@ -245,11 +194,9 @@ function getRecommendedProducts(
                     )
                     * $globalRating
                 );
-
             $score = (
                 $bayesianRating - 1
             ) / 4;
-
             $products[$productId]["rating_score"] =
                 max(
                     0,
@@ -259,16 +206,12 @@ function getRecommendedProducts(
                     )
                 );
         }
-
         mysqli_free_result(
             $ratingResult
         );
     }
-
     $categoryPurchases = [];
-
     $purchasedProducts = [];
-
     $purchaseSql = "
         SELECT
             oi.product_id,
@@ -282,133 +225,84 @@ function getRecommendedProducts(
         WHERE o.user_id = ?
           AND o.status <> 'Cancelled'
     ";
-
     $purchaseStmt = mysqli_prepare(
         $conn,
         $purchaseSql
     );
-
     if ($purchaseStmt) {
-
         mysqli_stmt_bind_param(
             $purchaseStmt,
             "i",
             $userId
         );
-
         mysqli_stmt_execute(
             $purchaseStmt
         );
-
-        $purchaseResult =
-            mysqli_stmt_get_result(
-                $purchaseStmt
-            );
-
+        $purchaseResult =mysqli_stmt_get_result($purchaseStmt);
         if ($purchaseResult) {
-
-            while (
-                $row = mysqli_fetch_assoc(
-                    $purchaseResult
-                )
-            ) {
-
+            while ($row = mysqli_fetch_assoc($purchaseResult)) {
                 $productId = (int) (
                     $row["product_id"] ?? 0
                 );
-
                 $category = strtolower(
                     trim(
                         $row["category"] ?? ""
                     )
                 );
-
                 $quantity = max(
                     1,
                     (int) (
                         $row["quantity"] ?? 0
                     )
                 );
-
                 if ($category !== "") {
-
-                    if (
-                        !isset(
-                            $categoryPurchases[
-                                $category
-                            ]
-                        )
-                    ) {
+                    if (!isset($categoryPurchases[$category])) {
                         $categoryPurchases[
                             $category
                         ] = 0;
                     }
-
                     $categoryPurchases[
                         $category
                     ] += $quantity;
                 }
-
-                if (
-                    !isset(
-                        $purchasedProducts[
-                            $productId
-                        ]
-                    )
-                ) {
+                if (!isset($purchasedProducts[$productId])) {
                     $purchasedProducts[
                         $productId
                     ] = 0;
                 }
-
                 $purchasedProducts[
                     $productId
                 ] += $quantity;
             }
-
             mysqli_free_result(
                 $purchaseResult
             );
         }
-
         mysqli_stmt_close(
             $purchaseStmt
         );
     }
-
-    $maxCategoryPurchase =
-        !empty($categoryPurchases)
+    $maxCategoryPurchase=!empty($categoryPurchases)
             ? max($categoryPurchases)
             : 1;
-
-    foreach (
-        $products
-        as $productId => &$product
-    ) {
-
+    foreach ($products as $productId => &$product) {
         $category = strtolower(
             trim(
                 $product["category"]
             )
         );
-
         $categoryScore = 0;
-
-        if (
-            $category !== "" &&
+        if ($category !== "" &&
             isset(
                 $categoryPurchases[
                     $category
                 ]
             )
         ) {
-
-            $categoryScore =
-                $categoryPurchases[
+            $categoryScore=$categoryPurchases[
                     $category
                 ] / $maxCategoryPurchase;
         }
-
         $sameProductPurchase =
             isset(
                 $purchasedProducts[
@@ -422,7 +316,6 @@ function getRecommendedProducts(
                     ] / 5
                 )
                 : 0;
-
         $product["buying_score"] =
             min(
                 1,
@@ -435,11 +328,8 @@ function getRecommendedProducts(
                 )
             );
     }
-
     unset($product);
-
     $activityScores = [];
-
     $activitySql = "
         SELECT
             product_id,
@@ -448,12 +338,10 @@ function getRecommendedProducts(
         FROM user_product_activity
         WHERE user_id = ?
     ";
-
     $activityStmt = mysqli_prepare(
         $conn,
         $activitySql
     );
-
     $activityWeights = [
         "Purchase" => 10,
         "Checkout" => 8,
@@ -470,68 +358,37 @@ function getRecommendedProducts(
         "remove from cart" => -3,
         "unlike" => -4
     ];
-
     if ($activityStmt) {
-
         mysqli_stmt_bind_param(
             $activityStmt,
             "i",
             $userId
         );
-
         mysqli_stmt_execute(
             $activityStmt
         );
-
         $activityResult =
             mysqli_stmt_get_result(
                 $activityStmt
             );
-
         if ($activityResult) {
-
-            while (
-                $row = mysqli_fetch_assoc(
-                    $activityResult
-                )
-            ) {
-
+            while ($row = mysqli_fetch_assoc($activityResult)) {
                 $productId = (int) (
                     $row["product_id"] ?? 0
                 );
-
-                if (
-                    !isset(
-                        $products[$productId]
-                    )
-                ) {
+                if (!isset($products[$productId])) {
                     continue;
                 }
-
-                $activityType =
-                    trim(
-                        $row["activity_type"] ?? ""
-                    );
-
+                $activityType =trim($row["activity_type"] ?? "");
                 $weight =
                     $activityWeights[
                         $activityType
                     ] ?? 0;
-
-                $createdAt =
-                    $row["created_at"] ?? "";
-
+                $createdAt=$row["created_at"] ?? "";
                 $daysAgo = 999;
-
                 if (!empty($createdAt)) {
-
-                    $timestamp =
-                        strtotime($createdAt);
-
-                    if (
-                        $timestamp !== false
-                    ) {
-
+                    $timestamp=strtotime($createdAt);
+                    if ($timestamp !== false) {
                         $daysAgo = floor(
                             (
                                 time() -
@@ -1202,7 +1059,6 @@ function getRecommendedProducts(
             1
         );
     }
-
     return $finalProducts;
 }
 ?>
