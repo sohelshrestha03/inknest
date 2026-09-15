@@ -9,15 +9,15 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     $orderId = (int) $_GET["order_id"];
     $stmt = mysqli_prepare(
         $conn,
-        "SELECT
-            orders.*,
-            users.user_name,
-            users.first_name,
-            users.last_name
-        FROM orders
-        INNER JOIN users
-            ON orders.user_id = users.id
-        WHERE orders.id = ?
+        "SELECT 
+            orders.*, 
+            users.user_name, 
+            users.first_name, 
+            users.last_name 
+        FROM orders 
+        INNER JOIN users 
+            ON orders.user_id = users.id 
+        WHERE orders.id = ? 
         LIMIT 1"
     );
     mysqli_stmt_bind_param(
@@ -35,7 +35,9 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     if (strtolower(trim($order["status"])) !== "delivered" || strtolower(trim($order["payment_status"])) !== "paid") {
         die("Bill is available only after the order is Delivered and Payment is Paid.");
     }
-    $customerName = trim( $order["first_name"] . " " . $order["last_name"]);
+    $customerName = trim(
+        $order["first_name"] . " " . $order["last_name"]
+    );
     if (empty($customerName)) {
         $customerName = $order["user_name"];
     }
@@ -56,6 +58,46 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     </title>
     <link rel="stylesheet" href="../css/orders.css?v=<?php echo time(); ?>">
     <style>
+        .sidebar {
+            position: fixed;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.closed {
+            transform: translateX(calc(-100% + 62px));
+        }
+        .main {
+            transition: margin-left 0.3s ease;
+        }
+        .main.sidebar-closed {
+            margin-left: 62px;
+        }
+        .sidebar.closed .sidebar-toggle {
+            right: 10px;
+        }
+        .sidebar.closed h1,
+        .sidebar.closed .admin-label,
+        .sidebar.closed nav,
+        .sidebar.closed .sidebar-bottom {
+            visibility: hidden;
+        }
         .bill-container {
             background: #fff;
             border: 1px solid #e5e5e5;
@@ -217,7 +259,6 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
             .total-box {
                 width: 100%;
             }
-
         }
         @media print {
             .sidebar,
@@ -242,17 +283,14 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     </style>
 </head>
 <body>
-<aside class="sidebar">
-    <h1>
-        Inknest
-    </h1>
-    <p class="admin-label">
-        ADMIN PANEL
-    </p>
+<aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">☰</button>
+    <h1>Inknest</h1>
+    <p class="admin-label">ADMIN PANEL</p>
     <nav>
         <a href="admin_dashboard.php">Dashboard</a>
         <a href="products.php">Products</a>
-        <a href="add_product.php" >Add Product</a>
+        <a href="add_product.php">Add Product</a>
         <a href="orders.php">Orders</a>
         <a href="users.php">Users</a>
         <a href="user_profiles.php">User Profiles</a>
@@ -263,14 +301,16 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
         <a href="chat.php">
-            Chat<span id="adminChatBadge" class="admin-chat-badge">0
+            Chat
+            <span
+                id="adminChatBadge"
+                class="admin-chat-badge">
+                0
             </span>
         </a>
     </nav>
     <div class="sidebar-bottom">
-        <a href="admin_logout.php">
-            Logout
-        </a>
+        <a href="admin_logout.php">Logout</a>
     </div>
 </aside>
 <main class="main">
@@ -287,7 +327,9 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
                 <p>Order Bill</p>
             </div>
             <div class="bill-number">
-                <strong>Bill #<?php echo (int) $order["id"]; ?></strong>
+                <strong>
+                    Bill #<?php echo (int) $order["id"]; ?>
+                </strong>
                 <span>
                     <?php
                     echo date(
@@ -301,35 +343,40 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
         <div class="bill-info">
             <div class="bill-info-box">
                 <h4>Customer Information</h4>
-                <p><strong>Name:</strong>
+                <p>
+                    <strong>Name:</strong>
                     <?php
                     echo htmlspecialchars(
                         $customerName
                     );
                     ?>
                 </p>
-                <p><strong>Username:</strong>
+                <p>
+                    <strong>Username:</strong>
                     <?php
                     echo htmlspecialchars(
                         $order["user_name"]
                     );
                     ?>
                 </p>
-                <p><strong>Email:</strong>
+                <p>
+                    <strong>Email:</strong>
                     <?php
                     echo htmlspecialchars(
                         $order["email"]
                     );
                     ?>
                 </p>
-                <p><strong>Phone:</strong>
+                <p>
+                    <strong>Phone:</strong>
                     <?php
                     echo htmlspecialchars(
                         $order["phone"]
                     );
                     ?>
                 </p>
-                <p><strong>Address:</strong>
+                <p>
+                    <strong>Address:</strong>
                     <?php
                     echo htmlspecialchars(
                         $order["delivery_address"]
@@ -339,7 +386,8 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
             </div>
             <div class="bill-info-box">
                 <h4>Payment Information</h4>
-                <p><strong>Payment Method:</strong>
+                <p>
+                    <strong>Payment Method:</strong>
                     <?php
                     echo !empty(
                         $order["payment_method"]
@@ -352,21 +400,25 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
                         : "N/A";
                     ?>
                 </p>
-                <p><strong>Payment Status:</strong>
+                <p>
+                    <strong>Payment Status:</strong>
+
                     <?php
                     echo htmlspecialchars(
                         $order["payment_status"]
                     );
                     ?>
                 </p>
-                <p><strong>Order Status:</strong>
+                <p>
+                    <strong>Order Status:</strong>
                     <?php
                     echo htmlspecialchars(
                         $order["status"]
                     );
                     ?>
                 </p>
-                <p><strong>Transaction ID:</strong>
+                <p>
+                    <strong>Transaction ID:</strong>
                     <?php
                     echo !empty(
                         $order["transaction_id"]
@@ -474,33 +526,45 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
             Thank you for your order from Inknest.
         </div>
         <div class="bill-actions">
-            <button type="button" onclick="window.print()">
-                Print / Save PDF
-            </button>
+            <button type="button" onclick="window.print()">Print / Save PDF</button>
             <a href="bill.php">Back to Bills</a>
         </div>
     </section>
 </main>
+<script>
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const main = document.querySelector(".main");
+    sidebarToggle.addEventListener("click", function () {
+        sidebar.classList.toggle("closed");
+        main.classList.toggle("sidebar-closed");
+        if (sidebar.classList.contains("closed")) {
+            sidebarToggle.textContent = "☰";
+        } else {
+            sidebarToggle.textContent = "☰";
+        }
+    });
+</script>
 </body>
 </html>
 <?php
 exit();
 }
-$sql = "SELECT
-            orders.id,
-            orders.total_amount,
-            orders.status,
-            orders.order_date,
-            orders.payment_method,
-            orders.payment_status,
-            users.user_name,
-            users.first_name,
-            users.last_name
-        FROM orders
-        INNER JOIN users
-            ON orders.user_id = users.id
-        WHERE LOWER(TRIM(orders.status)) = 'delivered'
-        AND LOWER(TRIM(orders.payment_status)) = 'paid'
+$sql = "SELECT 
+            orders.id, 
+            orders.total_amount, 
+            orders.status, 
+            orders.order_date, 
+            orders.payment_method, 
+            orders.payment_status, 
+            users.user_name, 
+            users.first_name, 
+            users.last_name 
+        FROM orders 
+        INNER JOIN users 
+            ON orders.user_id = users.id 
+        WHERE LOWER(TRIM(orders.status)) = 'delivered' 
+        AND LOWER(TRIM(orders.payment_status)) = 'paid' 
         ORDER BY orders.id DESC";
 $bills = mysqli_query(
     $conn,
@@ -512,12 +576,50 @@ $bills = mysqli_query(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        Bills | Inknest
-    </title>
+    <title>Bills | Inknest</title>
     <link rel="stylesheet" href="../css/orders.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin_footer.css?v=<?php echo time(); ?>">
     <style>
+        .sidebar {
+            position: fixed;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.closed {
+            transform: translateX(calc(-100% + 62px));
+        }
+        .main {
+            transition: margin-left 0.3s ease;
+        }
+        .main.sidebar-closed {
+            margin-left: 62px;
+        }
+        .sidebar.closed .sidebar-toggle {
+            right: 10px;
+        }
+        .sidebar.closed h1,
+        .sidebar.closed .admin-label,
+        .sidebar.closed nav,
+        .sidebar.closed .sidebar-bottom {
+            visibility: hidden;
+        }
         .bill-list {
             background: #fff;
             border: 1px solid #e5e5e5;
@@ -592,13 +694,10 @@ $bills = mysqli_query(
     </style>
 </head>
 <body>
-<aside class="sidebar">
-    <h1>
-        Inknest
-    </h1>
-    <p class="admin-label">
-        ADMIN PANEL
-    </p>
+<aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">☰</button>
+    <h1>Inknest</h1>
+    <p class="admin-label">ADMIN PANEL</p>
     <nav>
         <a href="admin_dashboard.php">Dashboard</a>
         <a href="products.php">Products</a>
@@ -612,19 +711,17 @@ $bills = mysqli_query(
         <a href="bill.php" class="active">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
-         <a href="chat.php">
-                Chat
-                <span
-                    id="adminChatBadge"
-                    class="admin-chat-badge">
-                    0
-                </span>
-            </a>
+        <a href="chat.php">
+            Chat
+            <span
+                id="adminChatBadge"
+                class="admin-chat-badge">
+                0
+            </span>
+        </a>
     </nav>
     <div class="sidebar-bottom">
-        <a href="admin_logout.php">
-            Logout
-        </a>
+        <a href="admin_logout.php">Logout</a>
     </div>
 </aside>
 <main class="main">
@@ -669,7 +766,6 @@ $bills = mysqli_query(
                             </th>
                         </tr>
                     </thead>
-
                     <tbody>
                     <?php while (
                         $bill = mysqli_fetch_assoc($bills)
@@ -678,8 +774,7 @@ $bills = mysqli_query(
                             <td>
                                 #
                                 <?php
-                                echo (int)
-                                    $bill["id"];
+                                echo (int) $bill["id"];
                                 ?>
                             </td>
                             <td>
@@ -709,8 +804,7 @@ $bills = mysqli_query(
                                 Rs.
                                 <?php
                                 echo number_format(
-                                    (float)
-                                    $bill["total_amount"],
+                                    (float) $bill["total_amount"],
                                     2
                                 );
                                 ?>
@@ -736,9 +830,7 @@ $bills = mysqli_query(
                                 ?>
                             </td>
                             <td>
-                                <a href="bill.php?order_id=<?php echo (int) $bill["id"]; ?>" class="view-bill-btn">
-                                    View Bill
-                                </a>
+                                <a href="bill.php?order_id=<?php echo (int) $bill["id"]; ?>" class="view-bill-btn">View Bill</a>
                             </td>
                         </tr>
                     <?php endwhile; ?>
@@ -748,11 +840,27 @@ $bills = mysqli_query(
         <?php else: ?>
             <div class="empty">
                 <h3>No Bills Available</h3>
-                <p>Bills will appear here after an order is
-                    Delivered and Payment is Paid.</p>
+                <p>
+                    Bills will appear here after an order is
+                    Delivered and Payment is Paid.
+                </p>
             </div>
         <?php endif; ?>
     </section>
 </main>
+<script>
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const main = document.querySelector(".main");
+    sidebarToggle.addEventListener("click", function () {
+        sidebar.classList.toggle("closed");
+        main.classList.toggle("sidebar-closed");
+        if (sidebar.classList.contains("closed")) {
+            sidebarToggle.textContent = "☰";
+        } else {
+            sidebarToggle.textContent = "☰";
+        }
+    });
+</script>
 </body>
 </html>

@@ -34,6 +34,43 @@ $wishlistQuery = mysqli_query(
     <title>Customer Wishlist | Inknest</title>
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
     <style>
+        .sidebar {
+            position: fixed;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.closed {
+            transform: translateX(calc(-100% + 62px));
+        }
+        .main {
+            transition: margin-left 0.3s ease;
+        }
+        .main.sidebar-closed {
+            margin-left: 62px;
+        }
+        .sidebar.closed h1,
+        .sidebar.closed .admin-label,
+        .sidebar.closed nav,
+        .sidebar.closed .sidebar-bottom {
+            visibility: hidden;
+        }
         .wishlist-container {
             margin-top: 30px;
             background: #fff;
@@ -90,47 +127,40 @@ $wishlistQuery = mysqli_query(
         }
     </style>
 </head>
-
 <body>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">☰</button>
     <h1>Inknest</h1>
-    <p class="admin-label">
-        ADMIN PANEL
-    </p>
+    <p class="admin-label">ADMIN PANEL</p>
     <nav>
-           <a href="admin_dashboard.php">Dashboard</a>
-            <a href="products.php">Products</a>
-            <a href="add_product.php" >Add Product</a>
-            <a href="orders.php">Orders</a>
-            <a href="users.php">Users</a>
-            <a href="user_profiles.php">User Profiles</a>
-            <a href="user_log.php">User Activity</a>
-            <a href="product_reviews.php">Product Reviews</a>
-            <a href="admin_wishlist.php" class="active">Customer Wishlist</a>
-            <a href="bill.php">Bills</a>
-            <a href="stock_management.php">Stock of Products</a>
-            <a href="stock_history.php">Stock History</a>
-            <a href="chat.php">
-                Chat<span id="adminChatBadge" class="admin-chat-badge">
-                    0
-                </span>
-            </a>
+        <a href="admin_dashboard.php">Dashboard</a>
+        <a href="products.php">Products</a>
+        <a href="add_product.php">Add Product</a>
+        <a href="orders.php">Orders</a>
+        <a href="users.php">Users</a>
+        <a href="user_profiles.php">User Profiles</a>
+        <a href="user_log.php">User Activity</a>
+        <a href="product_reviews.php">Product Reviews</a>
+        <a href="admin_wishlist.php" class="active">Customer Wishlist</a>
+        <a href="bill.php">Bills</a>
+        <a href="stock_management.php">Stock of Products</a>
+        <a href="stock_history.php">Stock History</a>
+        <a href="chat.php">
+            Chat
+            <span id="adminChatBadge" class="admin-chat-badge">
+                0
+            </span>
+        </a>
     </nav>
     <div class="sidebar-bottom">
-        <a href="admin_logout.php">
-            Logout
-        </a>
+        <a href="admin_logout.php">Logout</a>
     </div>
 </aside>
 <main class="main">
     <header class="header">
         <div>
-            <h2>
-                Customer Wishlist
-            </h2>
-            <p>
-                View products wishlisted by customers
-            </p>
+            <h2>Customer Wishlist</h2>
+            <p>View products wishlisted by customers</p>
         </div>
     </header>
     <div class="wishlist-container">
@@ -172,7 +202,7 @@ $wishlistQuery = mysqli_query(
                                     $row["image"]
                                 )
                             );
-                            $imagePath ="../images/products/" .$fileName;
+                            $imagePath ="../images/products/". $fileName;
                         }
                     ?>
                         <tr>
@@ -180,44 +210,70 @@ $wishlistQuery = mysqli_query(
                                 <?php echo $number++; ?>
                             </td>
                             <td>
-                                <?php echo htmlspecialchars(
-                                    $row["user_name"] ?? "Unknown User"
-                                ); ?>
+                                <?php
+                                echo htmlspecialchars(
+                                    $row["user_name"]
+                                    ?? "Unknown User"
+                                );
+                                ?>
                             </td>
                             <td>
-                                <?php echo htmlspecialchars(
-                                    $row["email"] ?? "-"
-                                ); ?>
+                                <?php
+                                echo htmlspecialchars(
+                                    $row["email"]
+                                    ?? "-"
+                                );
+                                ?>
                             </td>
                             <td>
                                 <div class="wishlist-product">
                                     <?php if (
                                         !empty($imagePath)
                                     ): ?>
-                                        <img src="<?php echo htmlspecialchars($imagePath); ?>"
-                                            alt="<?php echo htmlspecialchars($row["product_name"] ?? "Product"); ?>">
+                                        <img src="<?php
+                                            echo htmlspecialchars(
+                                                $imagePath
+                                            );
+                                            ?>"
+                                            alt="<?php
+                                            echo htmlspecialchars(
+                                                $row["product_name"]
+                                                ?? "Product"
+                                            );
+                                            ?>">
                                     <?php else: ?>
                                         <div class="no-image">
                                             No Image
                                         </div>
                                     <?php endif; ?>
                                     <span>
-                                        <?php echo htmlspecialchars(
-                                            $row["product_name"] ?? "Deleted Product"
-                                        ); ?>
+                                        <?php
+                                        echo htmlspecialchars(
+                                            $row["product_name"]
+                                            ?? "Deleted Product"
+                                        );
+                                        ?>
                                     </span>
                                 </div>
                             </td>
                             <td>
                                 Rs.
-                                <?php echo number_format(
-                                    (float)($row["price"] ?? 0),
+                                <?php
+                                echo number_format(
+                                    (float)(
+                                        $row["price"] ?? 0
+                                    ),
                                     2
-                                ); ?>
+                                );
+                                ?>
                             </td>
                             <td>
                                 <?php
-                                if (!empty($row["created_at"])) {
+                                if (
+                                    !empty(
+                                        $row["created_at"]
+                                    )
+                                ) {
                                     echo date(
                                         "M d, Y h:i A",
                                         strtotime(
@@ -240,5 +296,14 @@ $wishlistQuery = mysqli_query(
         <?php endif; ?>
     </div>
 </main>
+<script>
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const main = document.querySelector(".main");
+sidebarToggle.addEventListener("click", function () {
+    sidebar.classList.toggle("closed");
+    main.classList.toggle("sidebar-closed");
+});
+</script>
 </body>
 </html>

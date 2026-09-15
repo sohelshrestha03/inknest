@@ -32,9 +32,52 @@ $profileQuery = mysqli_query(
     <title>User Profiles | Inknest</title>
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
     <script src="../js/admin_dashboard.js" defer></script>
+    <style>
+        .sidebar {
+            position: fixed;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.closed {
+            transform: translateX(calc(-100% + 62px));
+        }
+        .main {
+            transition: margin-left 0.3s ease;
+        }
+        .main.sidebar-closed {
+            margin-left: 62px;
+        }
+        .sidebar.closed .sidebar-toggle {
+            right: 10px;
+        }
+        .sidebar.closed h1,
+        .sidebar.closed .admin-label,
+        .sidebar.closed nav,
+        .sidebar.closed .sidebar-bottom {
+            visibility: hidden;
+        }
+    </style>
 </head>
 <body>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">☰</button>
     <h1>Inknest</h1>
     <p class="admin-label">ADMIN PANEL</p>
     <nav>
@@ -44,20 +87,20 @@ $profileQuery = mysqli_query(
         <a href="orders.php">Orders</a>
         <a href="users.php">Users</a>
         <a href="user_profiles.php" class="active">User Profiles</a>
-         <a href="user_log.php">User Activity</a>
+        <a href="user_log.php">User Activity</a>
         <a href="product_reviews.php">Product Reviews</a>
         <a href="admin_wishlist.php">Customer Wishlist</a>
         <a href="bill.php">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
-         <a href="chat.php">
-                Chat
-                <span
-                    id="adminChatBadge"
-                    class="admin-chat-badge">
-                    0
-                </span>
-            </a>
+        <a href="chat.php">
+            Chat
+            <span
+                id="adminChatBadge"
+                class="admin-chat-badge">
+                0
+            </span>
+        </a>
     </nav>
     <div class="sidebar-bottom">
         <a href="admin_logout.php">
@@ -99,7 +142,9 @@ $profileQuery = mysqli_query(
                             <td>
                                 <?php if (!empty($profile["profile_picture"])): ?>
                                     <img src="../images/profile/<?php echo htmlspecialchars($profile["profile_picture"]); ?>"
-                                        alt="Profile Picture" width="50" height="50">
+                                        alt="Profile Picture"
+                                        width="50"
+                                        height="50">
                                 <?php else: ?>
                                     No Picture
                                 <?php endif; ?>
@@ -155,10 +200,24 @@ $profileQuery = mysqli_query(
                     <?php endwhile; ?>
                 </tbody>
             </table>
-         <?php else: ?>
+        <?php else: ?>
             <p>No user profiles found.</p>
         <?php endif; ?>
     </section>
 </main>
+<script>
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const main = document.querySelector(".main");
+    sidebarToggle.addEventListener("click", function () {
+        sidebar.classList.toggle("closed");
+        main.classList.toggle("sidebar-closed");
+        if (sidebar.classList.contains("closed")) {
+            sidebarToggle.textContent = "☰";
+        } else {
+            sidebarToggle.textContent = "☰";
+        }
+    });
+</script>
 </body>
 </html>

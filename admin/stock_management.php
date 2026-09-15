@@ -42,11 +42,12 @@ $statsQuery = mysqli_query(
      FROM products"
 );
 if ($statsQuery) {
-    $stats=mysqli_fetch_assoc($statsQuery);
-    $totalProducts=(int)($stats["total_products"] ?? 0);
-    $totalStock=(int)($stats["total_stock"] ?? 0);
-    $lowStockProducts=(int)($stats["low_stock"] ?? 0);
-    $outOfStockProducts=(int)($stats["out_of_stock"] ?? 0);
+    $stats = mysqli_fetch_assoc($statsQuery);
+    $totalProducts = (int)($stats["total_products"] ?? 0);
+    $totalStock = (int)($stats["total_stock"] ?? 0);
+    $lowStockProducts = (int)($stats["low_stock"] ?? 0);
+    $outOfStockProducts = (int)($stats["out_of_stock"] ?? 0);
+
 }
 if ($search !== "") {
     $searchValue = "%" . $search . "%";
@@ -68,7 +69,7 @@ if ($search !== "") {
         $searchValue
     );
     mysqli_stmt_execute($productQuery);
-    $productsResult=mysqli_stmt_get_result($productQuery);
+    $productsResult = mysqli_stmt_get_result($productQuery);
 } else {
     $productsResult = mysqli_query(
         $conn,
@@ -92,7 +93,8 @@ if ($search !== "") {
     <link rel="stylesheet" href="../css/admin_dashboard.css?v=<?php echo time(); ?>">
 </head>
 <body>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">☰</button>
     <h1>Inknest</h1>
     <p class="admin-label">ADMIN PANEL</p>
     <nav>
@@ -109,12 +111,10 @@ if ($search !== "") {
         <a href="stock_management.php" class="active">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
         <a href="chat.php">
-                Chat
-                <span
-                    id="adminChatBadge"
-                    class="admin-chat-badge">
-                    0
-                </span>
+            Chat
+            <span id="adminChatBadge" class="admin-chat-badge">
+                0
+            </span>
         </a>
     </nav>
     <div class="sidebar-bottom">
@@ -125,82 +125,77 @@ if ($search !== "") {
     <header class="header">
         <div>
             <h2>Stock Management</h2>
-            <p>Welcome back,
-                <?php
-                echo htmlspecialchars($adminUsername);
-                ?>
+            <p>
+                Welcome back,
+                <?php echo htmlspecialchars($adminUsername); ?>
             </p>
         </div>
     </header>
     <section class="stats">
         <div class="stat-card">
             <span>Total Products</span>
-            <strong><?php echo $totalProducts;?></strong>
+            <strong><?php echo $totalProducts; ?></strong>
         </div>
         <div class="stat-card">
             <span>Total Stock Units</span>
-            <strong><?php echo $totalStock;?></strong>
+            <strong><?php echo $totalStock; ?></strong>
         </div>
         <div class="stat-card">
             <span>Low Stock</span>
-            <strong><?php echo $lowStockProducts;?></strong>
+            <strong><?php echo $lowStockProducts; ?></strong>
         </div>
         <div class="stat-card">
             <span>Out of Stock</span>
-            <strong><?php echo $outOfStockProducts;?></strong>
+            <strong><?php echo $outOfStockProducts; ?></strong>
         </div>
     </section>
     <section class="section">
         <h3>Manage Product Stock</h3>
+
         <form method="GET" style="display:flex;gap:10px;margin:20px 0;flex-wrap:wrap;">
-            <input type="text" name="search" placeholder="Search product..." value="<?php echo htmlspecialchars($search); ?>"
+            <input type="text" name="search" placeholder="Search product..."
+                value="<?php echo htmlspecialchars($search); ?>"
                 style="flex:1;min-width:220px;padding:11px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
             <button type="submit" style="border:none;padding:11px 20px;border-radius:6px;cursor:pointer;font-weight:bold;">Search</button>
             <?php if ($search !== ""): ?>
-                <a href="stock_management.php" style="text-decoration:none;padding:11px 18px;border-radius:6px;background:#eee;
-                        color:#333;font-size:14px;">Clear</a>
+                <a href="stock_management.php" style="text-decoration:none;padding:11px 18px;border-radius:6px;background:#eee;color:#333;font-size:14px;">
+                    Clear
+                </a>
             <?php endif; ?>
         </form>
         <div id="message" style="display:none;padding:12px 15px;margin-bottom:15px;border-radius:6px;font-size:14px;"></div>
         <div style="overflow-x:auto;width:100%;">
             <?php if ($productsResult && mysqli_num_rows($productsResult) > 0): ?>
-                <table style=" width:100%; border-collapse:collapse; min-width:850px;">
+                <table style="width:100%;border-collapse:collapse;min-width:850px;">
                     <thead>
                         <tr>
-                            <th
-                                style="
-                                    text-align:left;
+                            <th style="text-align:left;
                                     padding:14px 10px;
                                     border-bottom:1px solid #ddd;
                                 ">
                                 Product
                             </th>
-                            <th
-                                style="
-                                    text-align:left;
+                            <th style="text-align:left;
                                     padding:14px 10px;
                                     border-bottom:1px solid #ddd;
                                 ">
                                 Price
                             </th>
-                            <th
-                                style="
+                            <th style="
                                     text-align:left;
                                     padding:14px 10px;
                                     border-bottom:1px solid #ddd;
                                 ">
                                 Stock
                             </th>
-                            <th
-                                style="
+                            <th style="
                                     text-align:left;
                                     padding:14px 10px;
                                     border-bottom:1px solid #ddd;
                                 ">
                                 Status
                             </th>
-                            <th
-                                style="
+                            <th style="
                                     text-align:left;
                                     padding:14px 10px;
                                     border-bottom:1px solid #ddd;
@@ -215,106 +210,74 @@ if ($search !== "") {
                         mysqli_fetch_assoc($productsResult)
                     ): ?>
                         <?php
-                        $productId=(int)$product["id"];
-                        $stock=(int)$product["stock"];
+                        $productId = (int)$product["id"];
+                        $stock = (int)$product["stock"];
                         if ($stock <= 0) {
-                            $status="Out of Stock";
-                            $statusColor="#dc2626";
-                        } elseif (
-                            $stock <= $lowStockLimit
-                        ) {
-                            $status="Low Stock";
-                            $statusColor="#d97706";
+                            $status = "Out of Stock";
+                            $statusColor = "#dc2626";
+                        } elseif ($stock <= $lowStockLimit) {
+                            $status = "Low Stock";
+                            $statusColor = "#d97706";
                         } else {
-                            $status="In Stock";
-                            $statusColor="#16a34a";
+                            $status = "In Stock";
+                            $statusColor = "#16a34a";
                         }
-                        $image=trim(
-                                (string)(
-                                    $product["image"] ?? ""
-                                )
-                            );
+                        $image = trim(
+                            (string)(
+                                $product["image"] ?? ""
+                            )
+                        );
                         if ($image !== "") {
                             $imagePath ="../images/products/" .basename($image);
                         } else {
                             $imagePath = "";
+
                         }
                         ?>
-                        <tr
-                            data-product-id="<?php
-                                echo $productId;
-                            ?>"
-                            data-stock="<?php
-                                echo $stock;
-                            ?>">
+                        <tr data-product-id="<?php echo $productId; ?>" data-stock="<?php echo $stock; ?>">
                             <td
                                 style="
                                     padding:14px 10px;
                                     border-bottom:1px solid #eee;
                                 ">
-                                <div
-                                    style="
-                                        display:flex;
+                                <div style="display:flex;
                                         align-items:center;
                                         gap:12px;
                                     ">
-                                    <?php if (
-                                        $imagePath !== ""
-                                    ): ?>
-                                        <img src="<?php
-                                                echo htmlspecialchars(
-                                                    $imagePath
-                                                );
-                                            ?>"
-                                            alt="<?php
-                                                echo htmlspecialchars(
-                                                    $product[
-                                                        "product_name"
-                                                    ]
-                                                );
-                                            ?>"
-                                            style="
-                                                width:50px;
+                                    <?php if ($imagePath !== ""): ?>
+                                        <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="<?php echo htmlspecialchars($product["product_name"]); ?>"
+                                            style="width:50px;
                                                 height:50px;
                                                 object-fit:cover;
                                                 border-radius:6px;
                                                 border:1px solid #ddd;
                                             ">
                                     <?php else: ?>
-                                        <div
-                                            style="
+                                        <div style="
                                                 width:50px;
                                                 height:50px;
                                                 border-radius:6px;
                                                 background:#eee;
-                                            "
-                                        ></div>
+                                            "></div>
                                     <?php endif; ?>
                                     <div>
                                         <strong>
                                             <?php
                                             echo htmlspecialchars(
-                                                $product[
-                                                    "product_name"
-                                                ]
+                                                $product["product_name"]
                                             );
                                             ?>
                                         </strong>
-                                        <small
-                                            style="
-                                                display:block;
+                                        <small style=" display:block;
                                                 color:#888;
                                                 margin-top:4px;
                                             ">
-                                            ID #<?php
-                                            echo $productId;
-                                            ?>
+                                            ID #<?php echo $productId; ?>
                                         </small>
                                     </div>
                                 </div>
                             </td>
-                            <td
-                                style="
+                            <td style="
                                     padding:14px 10px;
                                     border-bottom:1px solid #eee;
                                 ">
@@ -326,81 +289,56 @@ if ($search !== "") {
                                 );
                                 ?>
                             </td>
-                            <td
-                                style="
+                            <td style="
                                     padding:14px 10px;
                                     border-bottom:1px solid #eee;
                                 ">
                                 <strong
-                                    id="stock-<?php
-                                        echo $productId;
-                                    ?>"
+                                    id="stock-<?php echo $productId; ?>"
                                     style="
-                                        color:<?php
-                                            echo $statusColor;
-                                        ?>;
+                                        color:<?php echo $statusColor; ?>;
                                         font-size:18px;
                                     ">
-                                    <?php
-                                    echo $stock;
-                                    ?>
+                                    <?php echo $stock; ?>
                                 </strong>
                             </td>
-                            <td
-                                style="
+                            <td style="
                                     padding:14px 10px;
                                     border-bottom:1px solid #eee;
                                 ">
-                                <span
-                                    id="status-<?php
-                                        echo $productId;
-                                    ?>"
+                                <span id="status-<?php echo $productId; ?>"
                                     style="
                                         color:white;
-                                        background:<?php
-                                            echo $statusColor;
-                                        ?>;
+                                        background:<?php echo $statusColor; ?>;
                                         padding:5px 9px;
                                         border-radius:20px;
                                         font-size:12px;
                                         font-weight:bold;
                                     ">
-                                    <?php
-                                    echo $status;
-                                    ?>
+                                    <?php echo $status; ?>
                                 </span>
                             </td>
-                            <td
-                                style="
+                            <td style="
                                     padding:14px 10px;
                                     border-bottom:1px solid #eee;
                                 ">
-                                <div
-                                    style="
+                                <div style="
                                         display:flex;
                                         gap:6px;
                                         flex-wrap:wrap;
                                     ">
                                     <button type="button"
                                         onclick="openStockModal(
-                                            <?php
-                                            echo $productId;
-                                            ?>,
+                                            <?php echo $productId; ?>,
                                             'add',
-                                            <?php
-                                            echo $stock;
-                                            ?>,
-                                            <?php
-                                            echo htmlspecialchars(
+                                            <?php echo $stock; ?>,
+                                            <?php echo htmlspecialchars(
                                                 json_encode(
-                                                    $product[
-                                                        "product_name"
-                                                    ]
+                                                    $product["product_name"]
                                                 ),
                                                 ENT_QUOTES,
                                                 "UTF-8"
-                                            );
-                                            ?>
+                                            ); ?>
                                         )"
                                         style="
                                             border:none;
@@ -416,24 +354,16 @@ if ($search !== "") {
                                     </button>
                                     <button type="button"
                                         onclick="openStockModal(
-                                            <?php
-                                            echo $productId;
-                                            ?>,
+                                            <?php echo $productId; ?>,
                                             'reduce',
-                                            <?php
-                                            echo $stock;
-                                            ?>,
-                                            <?php
-                                            echo htmlspecialchars(
+                                            <?php echo $stock; ?>,
+                                            <?php echo htmlspecialchars(
                                                 json_encode(
-                                                    $product[
-                                                        "product_name"
-                                                    ]
+                                                    $product["product_name"]
                                                 ),
                                                 ENT_QUOTES,
                                                 "UTF-8"
-                                            );
-                                            ?>
+                                            ); ?>
                                         )"
                                         style="
                                             border:none;
@@ -449,24 +379,16 @@ if ($search !== "") {
                                     </button>
                                     <button type="button"
                                         onclick="openStockModal(
-                                            <?php
-                                            echo $productId;
-                                            ?>,
+                                            <?php echo $productId; ?>,
                                             'set',
-                                            <?php
-                                            echo $stock;
-                                            ?>,
-                                            <?php
-                                            echo htmlspecialchars(
+                                            <?php echo $stock; ?>,
+                                            <?php echo htmlspecialchars(
                                                 json_encode(
-                                                    $product[
-                                                        "product_name"
-                                                    ]
+                                                    $product["product_name"]
                                                 ),
                                                 ENT_QUOTES,
                                                 "UTF-8"
-                                            );
-                                            ?>
+                                            ); ?>
                                         )"
                                         style="
                                             border:none;
@@ -487,8 +409,7 @@ if ($search !== "") {
                     </tbody>
                 </table>
             <?php else: ?>
-                <div
-                    style="
+                <div style="
                         text-align:center;
                         padding:40px 20px;
                         color:#777;
@@ -496,9 +417,7 @@ if ($search !== "") {
                     <?php if ($search !== ""): ?>
                         No products found for
                         <strong>
-                            "<?php
-                            echo htmlspecialchars($search);
-                            ?>"
+                            "<?php echo htmlspecialchars($search); ?>"
                         </strong>.
                     <?php else: ?>
                         No products found.
@@ -508,8 +427,7 @@ if ($search !== "") {
         </div>
     </section>
 </main>
-<div
-    id="stockModal"
+<div id="stockModal"
     style="
         display:none;
         position:fixed;
@@ -528,11 +446,7 @@ if ($search !== "") {
             padding:25px;
             border-radius:10px;
         ">
-        <h3
-            id="modalTitle"
-            style="margin-bottom:8px;">
-            Manage Stock
-        </h3>
+        <h3 id="modalTitle" style="margin-bottom:8px;">Manage Stock</h3>
         <p id="modalProduct"
             style="
                 color:#777;
@@ -542,12 +456,8 @@ if ($search !== "") {
             Product
         </p>
         <form id="stockForm">
-            <input type="hidden"
-                id="productId"
-                name="product_id">
-            <input type="hidden"
-                id="stockAction"
-                name="action">
+            <input type="hidden" id="productId" name="product_id">
+            <input type="hidden" id="stockAction" name="action">
             <label for="stockQuantity"
                 style="
                     display:block;
@@ -557,12 +467,7 @@ if ($search !== "") {
                 ">
                 Quantity
             </label>
-            <input type="number"
-                id="stockQuantity"
-                name="quantity"
-                min="0"
-                step="1"
-                required
+            <input type="number" id="stockQuantity" name="quantity" min="0" step="1" required
                 style="
                     width:100%;
                     padding:11px;
@@ -570,8 +475,7 @@ if ($search !== "") {
                     border-radius:6px;
                     margin-bottom:20px;
                 ">
-            <div
-                style="
+            <div style="
                     display:flex;
                     justify-content:flex-end;
                     gap:10px;
@@ -587,8 +491,7 @@ if ($search !== "") {
                     ">
                     Cancel
                 </button>
-                <button type="submit"
-                    id="saveStockButton"
+                <button type="submit" id="saveStockButton"
                     style="
                         border:none;
                         padding:10px 17px;
@@ -605,43 +508,41 @@ if ($search !== "") {
     </div>
 </div>
 <script>
-const lowStockLimit=<?php echo $lowStockLimit; ?>;
+const lowStockLimit = <?php echo $lowStockLimit; ?>;
 function openStockModal(
     productId,
     action,
     currentStock,
     productName
 ) {
-    const modal=document.getElementById("stockModal");
-    const title=document.getElementById("modalTitle");
-    const product=document.getElementById("modalProduct");
-    const quantity=document.getElementById("stockQuantity");
+
+    const modal = document.getElementById("stockModal");
+    const title = document.getElementById("modalTitle");
+    const product = document.getElementById("modalProduct");
+    const quantity = document.getElementById("stockQuantity");
     document.getElementById(
         "productId"
     ).value = productId;
     document.getElementById(
         "stockAction"
     ).value = action;
-    product.textContent =
-        productName +
-        " | Current stock: " +
-        currentStock;
+    product.textContent=productName +" | Current stock: " +currentStock;
     quantity.removeAttribute("max");
     if (action === "add") {
-        title.textContent ="Add Stock";
+        title.textContent = "Add Stock";
         quantity.value = 1;
         quantity.min = 1;
     } else if (action === "reduce") {
-        title.textContent="Reduce Stock";
-        quantity.value=1;
-        quantity.min= 1;
-        quantity.max=currentStock;
+        title.textContent = "Reduce Stock";
+        quantity.value = 1;
+        quantity.min = 1;
+        quantity.max = currentStock;
     } else {
-        title.textContent ="Set Stock";
-        quantity.value=currentStock;
+        title.textContent = "Set Stock";
+        quantity.value = currentStock;
         quantity.min = 0;
     }
-    modal.style.display ="flex";
+    modal.style.display = "flex";
     setTimeout(function () {
         quantity.focus();
         quantity.select();
@@ -651,7 +552,6 @@ function closeStockModal() {
     document.getElementById(
         "stockModal"
     ).style.display = "none";
-
 }
 document.getElementById("stockModal")
     .addEventListener(
@@ -660,6 +560,7 @@ document.getElementById("stockModal")
             if (event.target === this) {
                 closeStockModal();
             }
+
         }
     );
 document.getElementById("stockForm")
@@ -668,9 +569,13 @@ document.getElementById("stockForm")
         function(event) {
             event.preventDefault();
             const formData=new FormData(this);
-            const productId=document.getElementById("productId").value;
-            const action=document.getElementById("stockAction").value;
-            const quantity =parseInt(
+            const productId=document.getElementById(
+                    "productId"
+                ).value;
+            const action=document.getElementById(
+                    "stockAction"
+                ).value;
+            const quantity=parseInt(
                     document.getElementById(
                         "stockQuantity"
                     ).value,
@@ -690,9 +595,11 @@ document.getElementById("stockForm")
                 );
                 return;
             }
-            const saveButton =document.getElementById("saveStockButton");
-            saveButton.disabled=true;
-            saveButton.textContent="Saving...";
+            const saveButton=document.getElementById(
+                    "saveStockButton"
+                );
+            saveButton.disabled = true;
+            saveButton.textContent = "Saving...";
             fetch(
                 "update_stock.php",
                 {
@@ -702,6 +609,7 @@ document.getElementById("stockForm")
             )
             .then(function(response) {
                 return response.json();
+
             })
             .then(function(data) {
                 if (!data.success) {
@@ -732,12 +640,11 @@ document.getElementById("stockForm")
                 );
             })
             .finally(function() {
-                saveButton.disabled=false;
-                saveButton.textContent="Save";
+                saveButton.disabled = false;
+                saveButton.textContent = "Save";
             });
         }
     );
-
 function updateProductStock(
     productId,
     stock
@@ -745,7 +652,10 @@ function updateProductStock(
     const stockElement=document.getElementById(
             "stock-" + productId
         );
-    const row =document.querySelector(
+    const statusElement=document.getElementById(
+            "status-" + productId
+        );
+    const row=document.querySelector(
             'tr[data-product-id="' +
             productId +
             '"]'
@@ -753,37 +663,36 @@ function updateProductStock(
     let status;
     let statusColor;
     if (stock <= 0) {
-        status="Out of Stock";
-        statusColor="#dc2626";
+        status = "Out of Stock";
+        statusColor = "#dc2626";
     } else if (stock <= lowStockLimit) {
-        status="Low Stock";
-        statusColor="#d97706";
+        status = "Low Stock";
+        statusColor = "#d97706";
     } else {
-        status="In Stock";
-        statusColor="#16a34a";
+        status = "In Stock";
+        statusColor = "#16a34a";
     }
     if (stockElement) {
-        stockElement.textContent=stock;
-        stockElement.style.color=statusColor;
+        stockElement.textContent = stock;
+        stockElement.style.color =statusColor;
     }
     if (statusElement) {
         statusElement.textContent=status;
         statusElement.style.background=statusColor;
     }
     if (row) {
-        row.dataset.stock =stock;
+        row.dataset.stock = stock;
     }
-
 }
 function showMessage(
     text,
     success
 ) {
-    const message = document.getElementById(
+    const message=document.getElementById(
             "message"
         );
-    message.textContent=text;
-    message.style.display="block";
+    message.textContent = text;
+    message.style.display = "block";
     if (success) {
         message.style.background="#dcfce7";
         message.style.color="#166534";
@@ -792,10 +701,69 @@ function showMessage(
         message.style.color="#991b1b";
     }
     setTimeout(function() {
-        message.style.display =
-            "none";
+        message.style.display = "none";
     }, 4000);
 }
+const sidebar=document.getElementById("sidebar");
+const sidebarToggle=document.getElementById("sidebarToggle");
+const main=document.querySelector(".main");
+sidebarToggle.addEventListener(
+    "click",
+    function() {
+        sidebar.classList.toggle("closed");
+        main.classList.toggle(
+            "sidebar-closed"
+        );
+        if (sidebar.classList.contains("closed")) {
+            sidebarToggle.textContent = "☰";
+        } else {
+            sidebarToggle.textContent = "☰";
+
+        }
+    }
+);
 </script>
+<style>
+.sidebar {
+    position: fixed;
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+.sidebar-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1002;
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 6px;
+    background: #111;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar.closed {
+    transform: translateX(calc(-100% + 62px));
+}
+.main {
+    transition: margin-left 0.3s ease;
+}
+.main.sidebar-closed {
+    margin-left: 62px;
+}
+.sidebar.closed .sidebar-toggle {
+    right: 10px;
+}
+.sidebar.closed h1,
+.sidebar.closed .admin-label,
+.sidebar.closed nav,
+.sidebar.closed .sidebar-bottom {
+    visibility: hidden;
+}
+</style>
 </body>
 </html>

@@ -81,11 +81,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     } elseif (!isset($allowedTypes[$imageInfo["mime"]])) {
                         $error = "Only JPG, PNG and WEBP images are allowed.";
                     } else {
-                        $extension =$allowedTypes[$imageInfo["mime"]];
-                        $newImageName =bin2hex(random_bytes(16))
+                        $extension=$allowedTypes[$imageInfo["mime"]];
+                        $newImageName=bin2hex(random_bytes(16))
                             . "."
                             . $extension;
-                        $uploadDirectory ="../images/products/";
+                        $uploadDirectory = "../images/products/";
                         if (!is_dir($uploadDirectory)) {
                             mkdir(
                                 $uploadDirectory,
@@ -93,9 +93,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 true
                             );
                         }
-                        $newImagePath=$uploadDirectory . $newImageName;
+                        $newImagePath =$uploadDirectory . $newImageName;
                         if (!move_uploaded_file($file["tmp_name"],$newImagePath)) {
-                            $error ="Failed to upload new image.";
+                            $error = "Failed to upload new image.";
                         } else {
                             $uploadedNewImage = true;
                         }
@@ -131,26 +131,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (mysqli_stmt_execute($stmt)) {
                 mysqli_stmt_close($stmt);
                 if ($uploadedNewImage && !empty($product["image"])) {
-                    $oldImagePath ="../images/products/"
-                        . basename($product["image"]);
+                    $oldImagePath="../images/products/". basename($product["image"]);
                     if (file_exists($oldImagePath) && is_file($oldImagePath)) {
                         unlink($oldImagePath);
                     }
                 }
-                $success ="Product updated successfully.";
-                $product["product_name"]=$productName;
-                $product["category"]=$category;
-                $product["description"]=$description;
-                $product["price"]=$priceValue;
-                $product["stock"] =$stockValue;
-                $product["image"] =$newImageName;
+                $success = "Product updated successfully.";
+                $product["product_name"] = $productName;
+                $product["category"] = $category;
+                $product["description"] = $description;
+                $product["price"] = $priceValue;
+                $product["stock"] = $stockValue;
+                $product["image"] = $newImageName;
             } else {
                 mysqli_stmt_close($stmt);
-                if ( $uploadedNewImage && file_exists($newImagePath)
-                ) {
+                if ($uploadedNewImage && file_exists($newImagePath)) {
                     unlink($newImagePath);
                 }
-                $error ="Failed to update product.";
+                $error = "Failed to update product.";
             }
         }
     }
@@ -164,9 +162,52 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <title>Edit Product | Inknest</title>
     <link rel="stylesheet" href="../css/edit_product.css?v=<?php echo time(); ?>">
     <script src="../js/edit_product.js?v=<?php echo time(); ?>" defer></script>
+    <style>
+        .sidebar {
+            position: fixed;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.closed {
+            transform: translateX(calc(-100% + 62px));
+        }
+        .main {
+            transition: margin-left 0.3s ease;
+        }
+        .main.sidebar-closed {
+            margin-left: 62px;
+        }
+        .sidebar.closed .sidebar-toggle {
+            right: 10px;
+        }
+        .sidebar.closed h1,
+        .sidebar.closed .admin-label,
+        .sidebar.closed nav,
+        .sidebar.closed .sidebar-bottom {
+            visibility: hidden;
+        }
+    </style>
 </head>
 <body>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">☰</button>
     <h1>Inknest</h1>
     <p class="admin-label">ADMIN PANEL</p>
     <nav>
@@ -182,14 +223,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <a href="bill.php">Bills</a>
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
-         <a href="chat.php">
-                Chat
-                <span
-                    id="adminChatBadge"
-                    class="admin-chat-badge">
-                    0
-                </span>
-            </a>
+        <a href="chat.php">
+            Chat
+            <span id="adminChatBadge" class="admin-chat-badge">
+                0
+            </span>
+        </a>
     </nav>
     <div class="sidebar-bottom">
         <a href="admin_logout.php">Logout</a>
@@ -205,35 +244,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <section class="product-container">
         <?php if ($error !== ""): ?>
             <div class="message error">
-                <?php echo htmlspecialchars($error);?>
+                <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
         <?php if ($success !== ""): ?>
             <div class="message success">
-                <?php echo htmlspecialchars($success);?>
+                <?php echo htmlspecialchars($success); ?>
             </div>
         <?php endif; ?>
         <div class="form-section">
             <form method="POST" enctype="multipart/form-data" id="productForm">
                 <div class="form-group">
                     <label for="product_name">Product Name</label>
-                    <input type="text" id="product_name" name="product_name" maxlength="255" value="<?php echo htmlspecialchars($product["product_name"]); ?>" required>
-                    <span class="error-text" id="productNameError"></span>
+                    <input type="text" id="product_name" name="product_name" maxlength="255"
+                        value="<?php echo htmlspecialchars($product["product_name"]); ?>" required>
+                    <span class="error-text" id="productNameError">
+                    </span>
                 </div>
                 <div class="form-group">
                     <label for="category">Category</label>
-                    <input type="text" id="category" name="category" maxlength="100" value="<?php echo htmlspecialchars($product["category"]); ?>"required>
+                    <input type="text" id="category" name="category" maxlength="100"
+                        value="<?php echo htmlspecialchars($product["category"]); ?>" required>
                     <span class="error-text" id="categoryError"></span>
                 </div>
                 <div class="form-group">
                     <label for="description">Description</label>
-                    <textarea id="description" name="description" rows="5" maxlength="1000" required
-                    ><?php echo htmlspecialchars($product["description"]); ?></textarea>
+                    <textarea id="description" name="description" rows="5" maxlength="1000"
+                        required><?php echo htmlspecialchars($product["description"]); ?></textarea>
                     <span class="error-text" id="descriptionError"></span>
                 </div>
                 <div class="form-group">
                     <label for="price">Price</label>
-                    <input type="number" id="price" name="price" step="0.01" min="0.01" value="<?php echo htmlspecialchars($product["price"]); ?>" required>
+                    <input type="number" id="price" name="price" step="0.01" min="0.01"
+                        value="<?php echo htmlspecialchars($product["price"]); ?>" required>
                     <span class="error-text" id="priceError"></span>
                 </div>
                 <div class="form-group">
@@ -245,7 +288,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <label>Current Image</label>
                     <?php if (!empty($product["image"])): ?>
                         <div class="current-image">
-                            <img src="../images/products/<?php echo htmlspecialchars($product["image"]); ?>" alt="Current Product Image" id="currentImage">
+                            <img src="../images/products/<?php echo htmlspecialchars($product["image"]); ?>"
+                                alt="Current Product Image" id="currentImage">
                         </div>
                     <?php else: ?>
                         <p class="no-image">No image available.</p>
@@ -268,5 +312,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </section>
 </main>
+<script>
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const main = document.querySelector(".main");
+    sidebarToggle.addEventListener("click", function () {
+        sidebar.classList.toggle("closed");
+        main.classList.toggle("sidebar-closed");
+        if (sidebar.classList.contains("closed")) {
+            sidebarToggle.textContent = "☰";
+        } else {
+            sidebarToggle.textContent = "☰";
+        }
+    });
+</script>
 </body>
 </html>

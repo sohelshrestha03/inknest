@@ -1,22 +1,18 @@
 <?php
 session_start();
 include "../config/database.php";
-
 if (!isset($_SESSION["admin_id"])) {
     header("Location: admin_login.php");
     exit();
 }
-
 $error = "";
 $success = "";
-
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $productName = trim($_POST["product_name"]);
     $category = trim($_POST["category"]);
     $description = trim($_POST["description"]);
     $price = trim($_POST["price"]);
     $stock = trim($_POST["stock"]);
-
     if ($productName === "" ||
         $category === "" ||
         $description === "" ||
@@ -25,11 +21,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error = "Please fill in all fields.";
     } elseif (!is_numeric($price) || $price <= 0) {
         $error = "Please enter a valid price.";
-    } elseif (!filter_var($stock, FILTER_VALIDATE_INT) && $stock !== "0") {
+    } elseif (
+        !filter_var($stock, FILTER_VALIDATE_INT) &&
+        $stock !== "0"
+    ) {
         $error = "Please enter a valid stock quantity.";
     } elseif ((int)$stock < 0) {
         $error = "Stock cannot be negative.";
-    } elseif (!isset($_FILES["image"]) || $_FILES["image"]["error"] !== UPLOAD_ERR_OK) {
+    } elseif (
+        !isset($_FILES["image"]) ||
+        $_FILES["image"]["error"] !== UPLOAD_ERR_OK
+    ) {
         $error = "Please select a product image.";
     } else {
         $image = $_FILES["image"];
@@ -45,7 +47,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 PATHINFO_EXTENSION
             )
         );
-
         if (!in_array($extension, $allowedExtensions, true)) {
             $error = "Only JPG, JPEG, PNG and WEBP images are allowed.";
         } elseif ($image["size"] > 5 * 1024 * 1024) {
@@ -56,11 +57,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 "image/png",
                 "image/webp"
             ];
-
             $imageInfo = getimagesize(
                 $image["tmp_name"]
             );
-
             if ($imageInfo === false) {
                 $error = "Invalid image file.";
             } else {
@@ -72,9 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         bin2hex(random_bytes(16))
                         . "."
                         . $extension;
-
-                    $uploadDirectory =
-                        "../images/products/";
+                    $uploadDirectory ="../images/products/";
 
                     if (!is_dir($uploadDirectory)) {
                         mkdir(
@@ -83,10 +80,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             true
                         );
                     }
-                    $uploadPath=$uploadDirectory. $newFileName;
-
-                    if (move_uploaded_file($image["tmp_name"],
-                            $uploadPath)) {
+                    $uploadPath =$uploadDirectory . $newFileName;
+                    if (move_uploaded_file(
+                            $image["tmp_name"],
+                            $uploadPath
+                        )
+                    ) {
                         mysqli_begin_transaction($conn);
                         try {
                             $sql = mysqli_prepare(
@@ -102,7 +101,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 )
                                 VALUES (?, ?, ?, ?, ?, ?)"
                             );
-
                             if (!$sql) {
                                 throw new Exception(
                                     "Failed to prepare product query."
@@ -120,40 +118,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 $stockValue,
                                 $newFileName
                             );
-
                             if (!mysqli_stmt_execute($sql)) {
                                 throw new Exception(
                                     "Failed to add product."
                                 );
                             }
-                            $productId =mysqli_insert_id($conn);
+                            $productId=mysqli_insert_id($conn);
                             mysqli_stmt_close($sql);
-
                             if ($stockValue > 0) {
-                                $adminId=(int)$_SESSION["admin_id"];
-                                $action="Increase";
-                                $oldStock=0;
-                                $newStock=$stockValue;
-                                $historySql=mysqli_prepare(
-                                        $conn,
-                                        "INSERT INTO stock_activity
-                                        (
-                                            product_id,
-                                            admin_id,
-                                            action,
-                                            quantity,
-                                            old_stock,
-                                            new_stock
-                                        )
-                                        VALUES (?, ?, ?, ?, ?, ?)"
-                                    );
-
+                                $adminId =(int)$_SESSION["admin_id"];
+                                $action = "Increase";
+                                $oldStock = 0;
+                                $newStock = $stockValue;
+                                $historySql = mysqli_prepare(
+                                    $conn,
+                                    "INSERT INTO stock_activity
+                                    (
+                                        product_id,
+                                        admin_id,
+                                        action,
+                                        quantity,
+                                        old_stock,
+                                        new_stock
+                                    )
+                                    VALUES (?, ?, ?, ?, ?, ?)"
+                                );
                                 if (!$historySql) {
                                     throw new Exception(
                                         "Failed to prepare stock history query."
                                     );
                                 }
-
                                 mysqli_stmt_bind_param(
                                     $historySql,
                                     "iisiii",
@@ -164,7 +158,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                     $oldStock,
                                     $newStock
                                 );
-
                                 if (!mysqli_stmt_execute($historySql)) {
                                     throw new Exception(
                                         "Failed to save stock history."
@@ -175,17 +168,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 );
                             }
                             mysqli_commit($conn);
-                            $success="Product added successfully.";
+                            $success ="Product added successfully.";
                         } catch (Exception $e) {
                             mysqli_rollback($conn);
-
                             if (file_exists($uploadPath)) {
                                 unlink($uploadPath);
                             }
-                            $error=$e->getMessage();
+                            $error = $e->getMessage();
                         }
                     } else {
-                        $error="Failed to upload image.";
+                        $error ="Failed to upload image.";
                     }
                 }
             }
@@ -201,9 +193,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Add Product | Inknest</title>
     <link rel="stylesheet" href="../css/add_product.css?v=<?php echo time(); ?>">
     <script src="../js/add_product.js" defer></script>
+    <style>
+        .sidebar {
+            position: fixed;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.closed {
+            transform: translateX(calc(-100% + 62px));
+        }
+        .main {
+            transition: margin-left 0.3s ease;
+        }
+        .main.sidebar-closed {
+            margin-left: 62px;
+        }
+        .sidebar.closed h1,
+        .sidebar.closed .admin-label,
+        .sidebar.closed nav,
+        .sidebar.closed .sidebar-bottom {
+            visibility: hidden;
+        }
+    </style>
 </head>
 <body>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">☰</button>
     <h1>Inknest</h1>
     <p class="admin-label">ADMIN PANEL</p>
     <nav>
@@ -220,7 +252,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <a href="stock_management.php">Stock of Products</a>
         <a href="stock_history.php">Stock History</a>
         <a href="chat.php">
-            Chat<span id="adminChatBadge" class="admin-chat-badge">
+            Chat
+            <span id="adminChatBadge" class="admin-chat-badge">
                 0
             </span>
         </a>
@@ -243,7 +276,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
-
         <?php if ($success !== ""): ?>
             <div class="message success">
                 <?php echo htmlspecialchars($success); ?>
@@ -252,33 +284,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <form id="addProductForm" action="add_product.php" method="POST" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="product_name">Product Name</label>
-                <input type="text" id="product_name" name="product_name" placeholder="Enter product name"
-                    value="<?php echo isset($_POST["product_name"]) ? htmlspecialchars($_POST["product_name"]) : ""; ?>">
+                <input type="text" id="product_name"
+                    name="product_name"
+                    placeholder="Enter product name"
+                    value="<?php
+                    echo isset($_POST["product_name"])
+                        ? htmlspecialchars($_POST["product_name"])
+                        : "";
+                    ?>">
             </div>
             <div class="form-group">
                 <label for="category">Category</label>
-                <input type="text" id="category" name="category" placeholder="Enter product category"
-                    value="<?php echo isset($_POST["category"]) ? htmlspecialchars($_POST["category"]) : ""; ?>">
+                <input type="text" id="category"
+                    name="category"
+                    placeholder="Enter product category"
+                    value="<?php
+                    echo isset($_POST["category"])
+                        ? htmlspecialchars($_POST["category"])
+                        : "";
+                    ?>">
             </div>
             <div class="form-group">
                 <label for="description">Description</label>
-                <textarea id="description" name="description" placeholder="Enter product description" rows="5"><?php echo isset($_POST["description"]) ? htmlspecialchars($_POST["description"]) : ""; ?></textarea>
+                <textarea id="description" name="description" placeholder="Enter product description"
+                    rows="5"
+                ><?php
+                echo isset($_POST["description"])
+                    ? htmlspecialchars($_POST["description"])
+                    : "";
+                ?></textarea>
             </div>
             <div class="form-group">
                 <label for="price">Price</label>
                 <input type="number" id="price" name="price" placeholder="Enter price" min="0.01" step="0.01"
-                    value="<?php echo isset($_POST["price"]) ? htmlspecialchars($_POST["price"]) : ""; ?>">
+                    value="<?php
+                    echo isset($_POST["price"])
+                        ? htmlspecialchars($_POST["price"])
+                        : "";
+                    ?>">
             </div>
             <div class="form-group">
                 <label for="stock">Stock</label>
                 <input type="number" id="stock" name="stock" placeholder="Enter stock quantity" min="0" step="1"
-                    value="<?php echo isset($_POST["stock"]) ? htmlspecialchars($_POST["stock"]) : ""; ?>">
+                    value="<?php
+                    echo isset($_POST["stock"])
+                        ? htmlspecialchars($_POST["stock"])
+                        : "";
+                    ?>">
                 <small>Enter the available quantity of this product.</small>
             </div>
             <div class="form-group">
                 <label for="image">Product Image</label>
                 <input type="file" id="image" name="image" accept=".jpg,.jpeg,.png,.webp">
-                <small>JPG, JPEG, PNG or WEBP. Maximum size: 5MB.</small>
+                <small>
+                    JPG, JPEG, PNG or WEBP.
+                    Maximum size: 5MB.
+                </small>
             </div>
             <div class="image-preview">
                 <img id="previewImage" src="" alt="Image Preview">
@@ -290,5 +351,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </section>
 </main>
+<script>
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const main = document.querySelector(".main");
+sidebarToggle.addEventListener("click", function () {
+    sidebar.classList.toggle("closed");
+    main.classList.toggle("sidebar-closed");
+});
+</script>
 </body>
 </html>
