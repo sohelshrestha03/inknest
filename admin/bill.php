@@ -9,15 +9,15 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     $orderId = (int) $_GET["order_id"];
     $stmt = mysqli_prepare(
         $conn,
-        "SELECT 
-            orders.*, 
-            users.user_name, 
-            users.first_name, 
-            users.last_name 
-        FROM orders 
-        INNER JOIN users 
-            ON orders.user_id = users.id 
-        WHERE orders.id = ? 
+        "SELECT
+            orders.*,
+            users.user_name,
+            users.first_name,
+            users.last_name
+        FROM orders
+        INNER JOIN users
+            ON orders.user_id = users.id
+        WHERE orders.id = ?
         LIMIT 1"
     );
     mysqli_stmt_bind_param(
@@ -35,27 +35,52 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     if (strtolower(trim($order["status"])) !== "delivered" || strtolower(trim($order["payment_status"])) !== "paid") {
         die("Bill is available only after the order is Delivered and Payment is Paid.");
     }
-    $customerName = trim(
-        $order["first_name"] . " " . $order["last_name"]
-    );
+    $customerName = trim($order["first_name"] . " " . $order["last_name"]);
     if (empty($customerName)) {
         $customerName = $order["user_name"];
     }
     $shippingPrice = 100.00;
-    $totalPrice = (float) $order["total_amount"];
-    $productPrice = $totalPrice - $shippingPrice;
-    if ($productPrice < 0) {
-        $productPrice = 0;
+    $itemsStmt = mysqli_prepare(
+        $conn,
+        "SELECT
+            oi.product_id,
+            oi.quantity,
+            p.product_name,
+            p.price
+        FROM order_items oi
+        INNER JOIN products p
+            ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+        ORDER BY oi.id ASC"
+    );
+    mysqli_stmt_bind_param(
+        $itemsStmt,
+        "i",
+        $orderId
+    );
+    mysqli_stmt_execute($itemsStmt);
+    $itemsResult = mysqli_stmt_get_result($itemsStmt);
+    $orderItems = [];
+    $productsTotal = 0;
+    while ($item = mysqli_fetch_assoc($itemsResult)) {
+        $quantity = (int) $item["quantity"];
+        $price = (float) $item["price"];
+        $itemTotal = $price * $quantity;
+        $item["quantity"] = $quantity;
+        $item["price"] = $price;
+        $item["item_total"] = $itemTotal;
+        $productsTotal += $itemTotal;
+        $orderItems[] = $item;
     }
+    mysqli_stmt_close($itemsStmt);
+    $totalPrice = $productsTotal + $shippingPrice;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        Bill #<?php echo (int) $order["id"]; ?> | Inknest
-    </title>
+    <title>Bill #<?php echo (int) $order["id"]; ?> | Inknest</title>
     <link rel="stylesheet" href="../css/orders.css?v=<?php echo time(); ?>">
     <style>
         .sidebar {
@@ -302,9 +327,7 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
         <a href="stock_history.php">Stock History</a>
         <a href="chat.php">
             Chat
-            <span
-                id="adminChatBadge"
-                class="admin-chat-badge">
+            <span id="adminChatBadge" class="admin-chat-badge">
                 0
             </span>
         </a>
@@ -402,7 +425,6 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
                 </p>
                 <p>
                     <strong>Payment Status:</strong>
-
                     <?php
                     echo htmlspecialchars(
                         $order["payment_status"]
@@ -434,29 +456,49 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
         <table class="bill-table">
             <thead>
                 <tr>
-                    <th>
-                        Description
-                    </th>
-                    <th>
-                        Amount
-                    </th>
+                    <th>Description</th>
+                    <th>Amount</th>
                 </tr>
             </thead>
             <tbody>
+            <?php if (!empty($orderItems)): ?>
+                <?php foreach ($orderItems as $item): ?>
+                    <tr>
+                        <td>
+                            <?php
+                            echo htmlspecialchars(
+                                $item["product_name"]
+                            );
+                            if ($item["quantity"] > 1) {
+                                echo " × " . $item["quantity"];
+                            }
+                            ?>
+                        </td>
+                        <td>
+                            Rs.
+                            <?php
+                            echo number_format(
+                                $item["item_total"],
+                                2
+                            );
+                            ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
                 <tr>
-                    <td>
-                        Product Price
-                    </td>
+                    <td>Product</td>
                     <td>
                         Rs.
                         <?php
                         echo number_format(
-                            $productPrice,
+                            $productsTotal,
                             2
                         );
                         ?>
                     </td>
                 </tr>
+            <?php endif; ?>
                 <tr>
                     <td>
                         Shipping Price
@@ -477,13 +519,13 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
             <div class="total-box">
                 <div class="total-row">
                     <span>
-                        Product Price
+                        Products Total
                     </span>
                     <strong>
                         Rs.
                         <?php
                         echo number_format(
-                            $productPrice,
+                            $productsTotal,
                             2
                         );
                         ?>
@@ -511,7 +553,7 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
                         Rs.
                         <?php
                         echo number_format(
-                            $productPrice + $shippingPrice,
+                            $totalPrice,
                             2
                         );
                         ?>
@@ -532,39 +574,39 @@ if (isset($_GET["order_id"]) && is_numeric($_GET["order_id"])) {
     </section>
 </main>
 <script>
-    const sidebar = document.getElementById("sidebar");
-    const sidebarToggle = document.getElementById("sidebarToggle");
-    const main = document.querySelector(".main");
-    sidebarToggle.addEventListener("click", function () {
-        sidebar.classList.toggle("closed");
-        main.classList.toggle("sidebar-closed");
-        if (sidebar.classList.contains("closed")) {
-            sidebarToggle.textContent = "☰";
-        } else {
-            sidebarToggle.textContent = "☰";
-        }
-    });
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const main = document.querySelector(".main");
+sidebarToggle.addEventListener("click", function () {
+    sidebar.classList.toggle("closed");
+    main.classList.toggle("sidebar-closed");
+    if (sidebar.classList.contains("closed")) {
+        sidebarToggle.textContent = "☰";
+    } else {
+        sidebarToggle.textContent = "☰";
+    }
+});
 </script>
 </body>
 </html>
 <?php
 exit();
 }
-$sql = "SELECT 
-            orders.id, 
-            orders.total_amount, 
-            orders.status, 
-            orders.order_date, 
-            orders.payment_method, 
-            orders.payment_status, 
-            users.user_name, 
-            users.first_name, 
-            users.last_name 
-        FROM orders 
-        INNER JOIN users 
-            ON orders.user_id = users.id 
-        WHERE LOWER(TRIM(orders.status)) = 'delivered' 
-        AND LOWER(TRIM(orders.payment_status)) = 'paid' 
+$sql = "SELECT
+            orders.id,
+            orders.total_amount,
+            orders.status,
+            orders.order_date,
+            orders.payment_method,
+            orders.payment_status,
+            users.user_name,
+            users.first_name,
+            users.last_name
+        FROM orders
+        INNER JOIN users
+            ON orders.user_id = users.id
+        WHERE LOWER(TRIM(orders.status)) = 'delivered'
+        AND LOWER(TRIM(orders.payment_status)) = 'paid'
         ORDER BY orders.id DESC";
 $bills = mysqli_query(
     $conn,
@@ -713,9 +755,7 @@ $bills = mysqli_query(
         <a href="stock_history.php">Stock History</a>
         <a href="chat.php">
             Chat
-            <span
-                id="adminChatBadge"
-                class="admin-chat-badge">
+            <span id="adminChatBadge" class="admin-chat-badge">
                 0
             </span>
         </a>
@@ -849,18 +889,19 @@ $bills = mysqli_query(
     </section>
 </main>
 <script>
-    const sidebar = document.getElementById("sidebar");
-    const sidebarToggle = document.getElementById("sidebarToggle");
-    const main = document.querySelector(".main");
-    sidebarToggle.addEventListener("click", function () {
-        sidebar.classList.toggle("closed");
-        main.classList.toggle("sidebar-closed");
-        if (sidebar.classList.contains("closed")) {
-            sidebarToggle.textContent = "☰";
-        } else {
-            sidebarToggle.textContent = "☰";
-        }
-    });
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const main = document.querySelector(".main");
+sidebarToggle.addEventListener("click", function () {
+    sidebar.classList.toggle("closed");
+    main.classList.toggle("sidebar-closed");
+    if (sidebar.classList.contains("closed")) {
+        sidebarToggle.textContent = "☰";
+    } else {
+        sidebarToggle.textContent = "☰";
+    }
+
+});
 </script>
 </body>
 </html>
