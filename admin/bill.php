@@ -900,7 +900,6 @@ sidebarToggle.addEventListener("click", function () {
     } else {
         sidebarToggle.textContent = "☰";
     }
-
 });
 </script>
 </body>
