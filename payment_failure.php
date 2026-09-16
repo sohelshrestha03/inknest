@@ -13,42 +13,46 @@ $orderId = 0;
 $transactionId = null;
 if (isset($_GET["data"]) && !empty($_GET["data"])) {
     $paymentMethod = "esewa";
-    $decodedData = base64_decode(
-        $_GET["data"],
-        true
-    );
-    if ($decodedData === false) {
-        $error = "Invalid eSewa payment response.";
-    } else {
-        $responseData = json_decode(
-            $decodedData,
+    $decodedData =
+        base64_decode(
+            $_GET["data"],
             true
         );
+    if ($decodedData === false) {
+        $error="Invalid eSewa payment response.";
+    } else {
+        $responseData =json_decode(
+                $decodedData,
+                true
+            );
         if (!is_array($responseData)) {
-            $error = "Invalid eSewa payment data.";
+            $error="Invalid eSewa payment data.";
         } else {
-            $status=$responseData["status"] ?? "";
-            $totalAmount=$responseData["total_amount"] ?? "";
-            $transactionUuid=$responseData["transaction_uuid"] ?? "";
-            $transactionCode=$responseData["transaction_code"] ?? "";
-            $productCode=$responseData["product_code"] ?? "";
-            $transactionId =
-                !empty($transactionCode)
+            $transactionUuid=$responseData[
+                    "transaction_uuid"
+                ] ?? "";
+            $transactionCode=$responseData[
+                    "transaction_code"
+                ] ?? "";
+            $transactionId=!empty($transactionCode)
                 ? $transactionCode
                 : $transactionUuid;
             if (empty($transactionUuid)) {
                 $error="eSewa transaction ID is missing.";
             } else {
-                $sql = "SELECT id, total_amount, payment_method, transaction_id
-                        FROM orders
-                        WHERE user_id = ?
-                        AND payment_method = 'esewa'
-                        AND transaction_id = ?
-                        LIMIT 1";
-                $stmt = mysqli_prepare(
-                    $conn,
-                    $sql
-                );
+                $sql = "
+                    SELECT
+                        id,
+                        total_amount,
+                        payment_method,
+                        transaction_id
+                    FROM orders
+                    WHERE user_id = ?
+                    AND payment_method = 'esewa'
+                    AND transaction_id = ?
+                    LIMIT 1
+                ";
+                $stmt=mysqli_prepare($conn,$sql);
                 if (!$stmt) {
                     $error="Unable to verify the order.";
                 } else {
@@ -58,24 +62,27 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                         $userId,
                         $transactionUuid
                     );
-                    mysqli_stmt_execute($stmt);
-                    $result=mysqli_stmt_get_result($stmt);
+                    mysqli_stmt_execute(
+                        $stmt
+                    );
+                    $result=mysqli_stmt_get_result(
+                            $stmt
+                        );
                     if (mysqli_num_rows($result) !== 1) {
                         $error="eSewa order could not be found.";
                     } else {
                         $order=mysqli_fetch_assoc($result);
                         $orderId=(int) $order["id"];
-                        $sql = "UPDATE orders
-                                SET payment_status = 'Failed',
-                                    status = 'Failed'
-                                WHERE id = ?
-                                AND user_id = ?
-                                AND payment_method = 'esewa'";
-                        $updateStmt=
-                            mysqli_prepare(
-                                $conn,
-                                $sql
-                            );
+                        $sql = "
+                            UPDATE orders
+                            SET
+                                payment_status = 'Failed',
+                                status = 'Failed'
+                            WHERE id = ?
+                            AND user_id = ?
+                            AND payment_method = 'esewa'
+                        ";
+                        $updateStmt=mysqli_prepare($conn,$sql);
                         if (!$updateStmt) {
                             $error="Unable to update the order.";
                         } else {
@@ -88,7 +95,7 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                             if (mysqli_stmt_execute($updateStmt)) {
                                 $success = true;
                             } else {
-                                $error ="Payment failed, but the order status could not be updated.";
+                                $error="Payment failed, but the order status could not be updated.";
                             }
                             mysqli_stmt_close(
                                 $updateStmt
@@ -102,19 +109,100 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
             }
         }
     }
+} elseif (isset($_GET["method"]) && $_GET["method"] === "khalti" && isset($_GET["pidx"])) {
+    $paymentMethod="khalti";
+    $pidx=trim($_GET["pidx"]);
+    if (empty($pidx)) {
+        $error="Khalti payment ID is missing.";
+    } else {
+        $sql = "
+            SELECT
+                id,
+                payment_method,
+                transaction_id
+            FROM orders
+            WHERE user_id = ?
+            AND payment_method = 'khalti'
+            AND transaction_id = ?
+            LIMIT 1
+        ";
+        $stmt=mysqli_prepare(
+                $conn,
+                $sql
+            );
+        if (!$stmt) {
+            $error="Unable to verify the Khalti order.";
+        } else {
+            mysqli_stmt_bind_param(
+                $stmt,
+                "is",
+                $userId,
+                $pidx
+            );
+            mysqli_stmt_execute(
+                $stmt
+            );
+            $result=mysqli_stmt_get_result(
+                    $stmt
+                );
+            if (mysqli_num_rows($result) !== 1) {
+                $error ="Khalti order could not be found.";
+            } else {
+                $order =mysqli_fetch_assoc(
+                        $result
+                    );
+                $orderId=(int) $order["id"];
+                $transactionId=$pidx;
+                $sql = "
+                    UPDATE orders
+                    SET
+                        payment_status = 'Failed',
+                        status = 'Failed'
+                    WHERE id = ?
+                    AND user_id = ?
+                    AND payment_method = 'khalti'
+                ";
+                $updateStmt =mysqli_prepare(
+                        $conn,
+                        $sql
+                    );
+                if (!$updateStmt) {
+                    $error="Unable to update the order.";
+                } else {
+                    mysqli_stmt_bind_param(
+                        $updateStmt,
+                        "ii",
+                        $orderId,
+                        $userId
+                    );
+                    if (mysqli_stmt_execute($updateStmt)) {
+                        $success = true;
+                    } else {
+                        $error="Payment failed, but the order status could not be updated.";
+                    }
+                    mysqli_stmt_close(
+                        $updateStmt
+                    );
+                }
+            }
+            mysqli_stmt_close($stmt);
+        }
+    }
 } elseif (isset($_GET["method"]) && $_GET["method"] === "cash" && isset($_GET["order_id"])) {
     $paymentMethod = "cash";
     $orderId =(int) $_GET["order_id"];
-    $sql = "SELECT id, total_amount, payment_method
-            FROM orders
-            WHERE id = ?
-            AND user_id = ?
-            AND payment_method = 'cash'
-            LIMIT 1";
-    $stmt = mysqli_prepare(
-        $conn,
-        $sql
-    );
+    $sql = "
+        SELECT
+            id,
+            total_amount,
+            payment_method
+        FROM orders
+        WHERE id = ?
+        AND user_id = ?
+        AND payment_method = 'cash'
+        LIMIT 1
+    ";
+    $stmt=mysqli_prepare($conn,$sql);
     if (!$stmt) {
         $error="Unable to verify the order.";
     } else {
@@ -129,14 +217,16 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
         if (mysqli_num_rows($result) !== 1) {
             $error="Invalid cash order.";
         } else {
-            $sql = "UPDATE orders
-                    SET payment_status = 'Pending',
-                        status = 'Pending'
-                    WHERE id = ?
-                    AND user_id = ?
-                    AND payment_method = 'cash'";
-            $updateStmt =
-                mysqli_prepare(
+            $sql = "
+                UPDATE orders
+                SET
+                    payment_status = 'Pending',
+                    status = 'Pending'
+                WHERE id = ?
+                AND user_id = ?
+                AND payment_method = 'cash'
+            ";
+            $updateStmt =mysqli_prepare(
                     $conn,
                     $sql
                 );
@@ -159,9 +249,7 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
                 );
             }
         }
-        mysqli_stmt_close(
-            $stmt
-        );
+        mysqli_stmt_close($stmt);
     }
 } else {
     $error="No valid payment information was received.";
@@ -196,7 +284,8 @@ if (isset($_GET["data"]) && !empty($_GET["data"])) {
             <div class="order-row">
                 <span>Order ID</span>
                 <strong>
-                    #<?php
+                    #
+                    <?php
                     echo htmlspecialchars(
                         $orderId
                     );

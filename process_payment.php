@@ -10,18 +10,24 @@ $shippingCharge = 100;
 $esewaProductCode = "EPAYTEST";
 $esewaSecretKey = "8gBm/:&EnhH.1/q";
 $esewaUrl = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+$khaltiSecretKey = "f47a6c4c68da43658a78c5a775b2f0a5";
+$khaltiInitiateUrl = "https://dev.khalti.com/api/v2/epayment/initiate/";
 $baseUrl = "http://localhost/inknest";
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     header("Location: checkout.php");
     exit();
 }
 $paymentMethod = $_POST["payment_method"] ?? "";
-$allowedMethods = ["esewa","cash"];
+$allowedMethods = [
+    "esewa",
+    "khalti",
+    "cash"
+];
 if (!in_array($paymentMethod, $allowedMethods, true)) {
     die("Invalid payment method.");
 }
-$email=trim($_POST["email"] ?? "");
-$phone=trim($_POST["phone"] ?? "");
+$email = trim($_POST["email"] ?? "");
+$phone = trim($_POST["phone"] ?? "");
 $deliveryAddress = trim($_POST["delivery_address"] ?? "");
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     die("Invalid email address.");
@@ -51,9 +57,7 @@ foreach ($cart as $id) {
 if (empty($cleanCart)) {
     die("Invalid products in cart.");
 }
-$productIds = array_values(
-    array_unique($cleanCart)
-);
+$productIds = array_values(array_unique($cleanCart));
 if (empty($productIds)) {
     die("No products found in cart.");
 }
@@ -74,13 +78,9 @@ $sql = "
     FROM products
     WHERE id IN ($placeholders)
 ";
-
-$stmt = mysqli_prepare(
-    $conn,
-    $sql
-);
+$stmt = mysqli_prepare($conn, $sql);
 if (!$stmt) {
-    die("Product query failed: " .mysqli_error($conn));
+    die("Product query failed: " . mysqli_error($conn));
 }
 $types = str_repeat(
     "i",
@@ -94,7 +94,7 @@ mysqli_stmt_bind_param(
 if (!mysqli_stmt_execute($stmt)) {
     $error = mysqli_stmt_error($stmt);
     mysqli_stmt_close($stmt);
-    die("Product query failed: " .$error);
+    die("Product query failed: " . $error);
 }
 mysqli_stmt_bind_result(
     $stmt,
@@ -138,9 +138,7 @@ foreach ($cartQuantities as $cartProductId => $quantity) {
     if ($quantity > $availableStock) {
         die(
             "Not enough stock for " .
-            htmlspecialchars(
-                $product["product_name"]
-            ) .
+            htmlspecialchars($product["product_name"]) .
             ". Available stock: " .
             $availableStock .
             ", requested: " .
@@ -283,7 +281,6 @@ try {
             ?
         )
     ";
-
     $activityStmt = mysqli_prepare(
         $conn,
         $activitySql
@@ -307,7 +304,7 @@ try {
             $activityType
         );
         if (!mysqli_stmt_execute($activityStmt)) {
-            $activityError=mysqli_stmt_error($activityStmt);
+            $activityError = mysqli_stmt_error($activityStmt);
             mysqli_stmt_close($activityStmt);
             throw new Exception(
                 "Checkout activity failed: " .
@@ -321,9 +318,7 @@ try {
     mysqli_rollback($conn);
     die(
         "Checkout failed: " .
-        htmlspecialchars(
-            $e->getMessage()
-        )
+        htmlspecialchars($e->getMessage())
     );
 }
 if ($paymentMethod === "cash") {
@@ -381,23 +376,20 @@ if ($paymentMethod === "esewa") {
     );
     $taxAmount = "0";
     $productServiceCharge = "0";
-    $productDeliveryCharge =
-        number_format(
-            $shippingCharge,
-            2,
-            ".",
-            ""
-        );
-    $totalAmountFormatted =
-        number_format(
-            $totalAmount,
-            2,
-            ".",
-            ""
-        );
+    $productDeliveryCharge = number_format(
+        $shippingCharge,
+        2,
+        ".",
+        ""
+    );
+    $totalAmountFormatted = number_format(
+        $totalAmount,
+        2,
+        ".",
+        ""
+    );
     $signedFieldNames="total_amount,transaction_uuid,product_code";
-    $signatureMessage =
-        "total_amount=" .
+    $signatureMessage ="total_amount=" .
         $totalAmountFormatted .
         ",transaction_uuid=" .
         $transactionUuid .
@@ -411,8 +403,8 @@ if ($paymentMethod === "esewa") {
             true
         )
     );
-    $successUrl=$baseUrl ."/payment_success.php";
-    $failureUrl =$baseUrl ."/payment_failure.php";
+    $successUrl=$baseUrl . "/payment_success.php";
+    $failureUrl=$baseUrl . "/payment_failure.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -423,30 +415,126 @@ if ($paymentMethod === "esewa") {
     <link rel="stylesheet" href="css/process_payment.css?v=<?php echo time(); ?>">
 </head>
 <body>
-    <div class="loading">
-        <h2>Redirecting to eSewa...</h2>
-        <p>Please wait while we connect you to eSewa.</p>
-        <form id="esewaForm" action="<?php echo htmlspecialchars($esewaUrl); ?>" method="POST">
-            <input type="hidden" name="amount" value="<?php echo htmlspecialchars($amount); ?>">
-            <input type="hidden" name="tax_amount" value="<?php echo htmlspecialchars($taxAmount); ?>">
-            <input type="hidden" name="total_amount" value="<?php echo htmlspecialchars($totalAmountFormatted); ?>">
-            <input type="hidden" name="transaction_uuid" value="<?php echo htmlspecialchars($transactionUuid); ?>">
-            <input type="hidden" name="product_code" value="<?php echo htmlspecialchars($esewaProductCode); ?>">
-            <input type="hidden" name="product_service_charge" value="<?php echo htmlspecialchars($productServiceCharge); ?>">
-            <input type="hidden" name="product_delivery_charge" value="<?php echo htmlspecialchars($productDeliveryCharge); ?>">
-            <input type="hidden" name="success_url" value="<?php echo htmlspecialchars($successUrl); ?>">
-            <input type="hidden" name="failure_url" value="<?php echo htmlspecialchars($failureUrl); ?>">
-            <input type="hidden" name="signed_field_names" value="<?php echo htmlspecialchars($signedFieldNames); ?>">
-            <input type="hidden" name="signature" value="<?php echo htmlspecialchars($signature); ?>">
-            <button type="submit">Continue to eSewa</button>
-        </form>
-    </div>
-    <script>
-        document.getElementById("esewaForm").submit();
-    </script>
+<div class="loading">
+    <h2>Redirecting to eSewa...</h2>
+    <p>Please wait while we connect you to eSewa.</p>
+    <form id="esewaForm" action="<?php echo htmlspecialchars($esewaUrl); ?>" method="POST">
+        <input type="hidden" name="amount" value="<?php echo htmlspecialchars($amount); ?>">
+        <input type="hidden" name="tax_amount" value="<?php echo htmlspecialchars($taxAmount); ?>">
+        <input type="hidden" name="total_amount" value="<?php echo htmlspecialchars($totalAmountFormatted); ?>">
+        <input type="hidden" name="transaction_uuid" value="<?php echo htmlspecialchars($transactionUuid); ?>">
+        <input type="hidden" name="product_code" value="<?php echo htmlspecialchars($esewaProductCode); ?>">
+        <input type="hidden" name="product_service_charge" value="<?php echo htmlspecialchars($productServiceCharge); ?>">
+        <input type="hidden" name="product_delivery_charge" value="<?php echo htmlspecialchars($productDeliveryCharge); ?>">
+        <input type="hidden" name="success_url" value="<?php echo htmlspecialchars($successUrl); ?>">
+        <input type="hidden" name="failure_url" value="<?php echo htmlspecialchars($failureUrl); ?>">
+        <input type="hidden" name="signed_field_names" value="<?php echo htmlspecialchars($signedFieldNames); ?>">
+        <input type="hidden" name="signature" value="<?php echo htmlspecialchars($signature); ?>">
+        <button type="submit">Continue to eSewa</button>
+    </form>
+</div>
+<script>
+document.getElementById("esewaForm").submit();
+</script>
 </body>
 </html>
 <?php
     exit();
 }
+if ($paymentMethod === "khalti") {
+    if ($khaltiSecretKey === "YOUR_KHALTI_SECRET_KEY") {
+        die("Khalti secret key has not been configured.");
+    }
+    $purchaseOrderId="INK-" .
+        $orderId .
+        "-" .
+        time();
+    $amountPaisa =(int) round($totalAmount * 100);
+    $returnUrl=$baseUrl . "/payment_success.php?method=khalti";
+    $websiteUrl=$baseUrl;
+    $payload = [
+        "return_url" => $returnUrl,
+        "website_url" => $websiteUrl,
+        "amount" => $amountPaisa,
+        "purchase_order_id" => $purchaseOrderId,
+        "purchase_order_name" => "Inknest Order #" . $orderId
+    ];
+    $ch = curl_init($khaltiInitiateUrl);
+    curl_setopt(
+        $ch,
+        CURLOPT_RETURNTRANSFER,
+        true
+    );
+    curl_setopt(
+        $ch,
+        CURLOPT_POST,
+        true
+    );
+    curl_setopt(
+        $ch,
+        CURLOPT_HTTPHEADER,
+        [
+            "Authorization: Key " . $khaltiSecretKey,
+            "Content-Type: application/json"
+        ]
+    );
+    curl_setopt(
+        $ch,
+        CURLOPT_POSTFIELDS,
+        json_encode($payload)
+    );
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo(
+        $ch,
+        CURLINFO_HTTP_CODE
+    );
+    if ($response === false) {
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        die("Khalti connection failed: " . $curlError);
+    }
+    curl_close($ch);
+    $responseData=json_decode(
+            $response,
+            true
+        );
+    if ($httpCode < 200 || $httpCode >= 300 ||!is_array($responseData)) {
+        $message=$responseData["detail"] ?? "Khalti payment initiation failed.";
+        die(htmlspecialchars($message));
+    }
+    $pidx=$responseData["pidx"] ?? "";
+    $paymentUrl=$responseData["payment_url"] ?? "";
+    if (empty($pidx) || empty($paymentUrl)) {
+        die("Invalid response received from Khalti.");
+    }
+    $sql = "
+        UPDATE orders
+        SET transaction_id = ?
+        WHERE id = ?
+        AND user_id = ?
+    ";
+    $stmt = mysqli_prepare(
+        $conn,
+        $sql
+    );
+    if (!$stmt) {
+        die("Unable to save Khalti transaction.");
+    }
+    mysqli_stmt_bind_param(
+        $stmt,
+        "sii",
+        $pidx,
+        $orderId,
+        $userId
+    );
+    if (!mysqli_stmt_execute($stmt)) {
+        $error = mysqli_stmt_error($stmt);
+        mysqli_stmt_close($stmt);
+        die("Unable to save Khalti transaction: " . $error);
+    }
+    mysqli_stmt_close($stmt);
+    header("Location: " . $paymentUrl);
+    exit();
+}
+die("Invalid payment method.");
 ?>

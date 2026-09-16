@@ -21,6 +21,7 @@ $username = $_SESSION["username"] ?? "";
     <div class="nav-links">
         <span>Welcome,<?= htmlspecialchars($username) ?></span>
         <a href="home.php">Products</a>
+        <a href="history.php">History</a>
         <a href="cart.php" class="active">Cart
             <span id="cartCount">0</span></a>
         <a href="logout.php">Logout</a>

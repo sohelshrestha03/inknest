@@ -26,7 +26,7 @@ $username = $_SESSION["username"] ?? "User";
         <span>Hi, <?php echo htmlspecialchars($username); ?></span>
         <a href="home.php">Products</a>
         <a href="cart.php">Cart</a>
-        <a href="history">History</a>
+        <a href="history.php">History</a>
         <a href="logout.php">Logout</a>
     </div>
 </nav>
@@ -36,6 +36,7 @@ $username = $_SESSION["username"] ?? "User";
         <p>Enter your delivery details before payment.</p>
     </div>
     <form id="checkoutForm" method="POST" action="process_payment.php">
+        <input type="hidden" name="cart" id="cart">
         <div class="checkout-grid">
             <section class="checkout-card">
                 <h3>Delivery Information</h3>
@@ -65,6 +66,16 @@ $username = $_SESSION["username"] ?? "User";
                             <div class="payment-info">
                                 <strong>eSewa</strong>
                                 <span>Pay securely with eSewa</span>
+                            </div>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment_method" value="khalti">
+                            <div class="payment-logo">
+                                <img src="img/khalti.jpg" alt="Khalti">
+                            </div>
+                            <div class="payment-info">
+                                <strong>Khalti</strong>
+                                <span>Pay securely with Khalti</span>
                             </div>
                         </label>
                         <label class="payment-option">
@@ -109,4 +120,3 @@ $username = $_SESSION["username"] ?? "User";
 <script src="js/checkout.js?v=<?php echo time(); ?>" defer></script>
 </body>
 </html>
-
