@@ -14,32 +14,35 @@ if (!isset($allowedSorts[$sort])) {
 $orderBy = $allowedSorts[$sort];
 function sortProducts(array &$products, string $sort): void
 {
-    usort($products, function ($a, $b) use ($sort) {
-        switch ($sort) {
-            case "oldest":
-                return ((int)($a["id"] ?? 0))
-                    <=> ((int)($b["id"] ?? 0));
-            case "price_low":
-                return ((float)($a["price"] ?? 0))
-                    <=> ((float)($b["price"] ?? 0));
-            case "price_high":
-                return ((float)($b["price"] ?? 0))
-                    <=> ((float)($a["price"] ?? 0));
-            case "name_az":
-                return strcasecmp(
-                    $a["product_name"] ?? "",
-                    $b["product_name"] ?? ""
-                );
-            case "name_za":
-                return strcasecmp(
-                    $b["product_name"] ?? "",
-                    $a["product_name"] ?? ""
-                );
-            case "newest":
-            default:
-                return ((int)($b["id"] ?? 0))
-                    <=> ((int)($a["id"] ?? 0));
+    usort(
+        $products,
+        function ($a, $b) use ($sort) {
+            switch ($sort) {
+                case "oldest":
+                    return (int) ($a["id"] ?? 0)
+                        <=> (int) ($b["id"] ?? 0);
+                case "price_low":
+                    return (float) ($a["price"] ?? 0)
+                        <=> (float) ($b["price"] ?? 0);
+                case "price_high":
+                    return (float) ($b["price"] ?? 0)
+                        <=> (float) ($a["price"] ?? 0);
+                case "name_az":
+                    return strcasecmp(
+                        (string) ($a["product_name"] ?? ""),
+                        (string) ($b["product_name"] ?? "")
+                    );
+                case "name_za":
+                    return strcasecmp(
+                        (string) ($b["product_name"] ?? ""),
+                        (string) ($a["product_name"] ?? "")
+                    );
+                case "newest":
+                default:
+                    return (int) ($b["id"] ?? 0)
+                        <=> (int) ($a["id"] ?? 0);
+            }
         }
-    });
+    );
 }
 ?>
