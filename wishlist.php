@@ -1,241 +1,408 @@
 <?php
 session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
 include "config/database.php";
-header("Content-Type: application/json; charset=UTF-8");
 if (!isset($_SESSION["user_id"])) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Please login first."
-    ]);
+    header("Location: login.php");
     exit();
 }
-$userId = (int)$_SESSION["user_id"];
-$productId = (int)($_POST["product_id"] ?? 0);
-if ($productId <= 0) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid product."
-    ]);
-    exit();
-}
-$productStmt = mysqli_prepare(
+$userId = (int) $_SESSION["user_id"];
+$username = $_SESSION["username"] ?? "User";
+$profilePicture = $_SESSION["profile_picture"] ?? "";
+$wishlistProducts = [];
+$stmt = mysqli_prepare(
     $conn,
-    "SELECT id
-     FROM products
-     WHERE id = ?
-     LIMIT 1"
+    "SELECT
+        p.id,
+        p.product_name,
+        p.description,
+        p.price,
+        p.image,
+        p.stock,
+        p.category
+     FROM wishlist w
+     INNER JOIN products p
+        ON w.product_id = p.id
+     WHERE w.user_id = ?
+       AND p.is_deleted = 0
+     ORDER BY w.id DESC"
 );
-if (!$productStmt) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Product query failed."
-    ]);
-    exit();
-}
-mysqli_stmt_bind_param(
-    $productStmt,
-    "i",
-    $productId
-);
-mysqli_stmt_execute($productStmt);
-mysqli_stmt_bind_result(
-    $productStmt,
-    $foundProductId
-);
-$productExists=mysqli_stmt_fetch($productStmt);
-mysqli_stmt_close($productStmt);
-if (!$productExists) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Product not found."
-    ]);
-    exit();
-}
-$checkStmt = mysqli_prepare(
-    $conn,
-    "SELECT id
-     FROM wishlist
-     WHERE user_id = ?
-       AND product_id = ?
-     LIMIT 1"
-);
-if (!$checkStmt) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Wishlist check failed."
-    ]);
-    exit();
-}
-mysqli_stmt_bind_param(
-    $checkStmt,
-    "ii",
-    $userId,
-    $productId
-);
-mysqli_stmt_execute($checkStmt);
-mysqli_stmt_bind_result(
-    $checkStmt,
-    $wishlistId
-);
-$isWishlisted =mysqli_stmt_fetch($checkStmt);
-mysqli_stmt_close($checkStmt);
-if ($isWishlisted) {
-    $deleteStmt = mysqli_prepare(
-        $conn,
-        "DELETE FROM wishlist
-         WHERE user_id = ?
-           AND product_id = ?"
-    );
-    if (!$deleteStmt) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unable to remove wishlist."
-        ]);
-        exit();
-    }
+if ($stmt) {
     mysqli_stmt_bind_param(
-        $deleteStmt,
-        "ii",
-        $userId,
-        $productId
+        $stmt,
+        "i",
+        $userId
     );
-    if (!mysqli_stmt_execute($deleteStmt)) {
-        $error =mysqli_stmt_error($deleteStmt);
-        mysqli_stmt_close($deleteStmt);
-        echo json_encode([
-            "success" => false,
-            "message" =>
-                "Unable to remove wishlist: " . $error
-        ]);
-        exit();
-    }
-    mysqli_stmt_close($deleteStmt);
-    $activityType = "Unlike";
-    $activityStmt = mysqli_prepare(
-        $conn,
-        "INSERT INTO user_product_activity
-        (
-            user_id,
-            product_id,
-            activity_type,
-            created_at
-        )
-        VALUES (?, ?, ?, NOW())"
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_bind_result(
+        $stmt,
+        $id,
+        $productName,
+        $description,
+        $price,
+        $image,
+        $stock,
+        $category
     );
-    if (!$activityStmt) {
-        echo json_encode([
-            "success" => false,
-            "message" =>
-                "Wishlist removed, but activity query failed: " .
-                mysqli_error($conn)
-        ]);
-        exit();
+    while (mysqli_stmt_fetch($stmt)) {
+        $wishlistProducts[] = [
+            "id" => $id,
+            "product_name" => $productName,
+            "description" => $description,
+            "price" => $price,
+            "image" => $image,
+            "stock" => $stock,
+            "category" => $category
+        ];
     }
-    mysqli_stmt_bind_param(
-        $activityStmt,
-        "iis",
-        $userId,
-        $productId,
-        $activityType
+    mysqli_stmt_close($stmt);
+}
+$wishlistCount = count($wishlistProducts);
+$profileImage = "";
+if (!empty($profilePicture)) {
+    $profileImage = "images/profile/" . $profilePicture;
+}
+function renderWishlistProduct(array $product): void
+{
+    $productId = (int) ($product["id"] ?? 0);
+    $productName = htmlspecialchars(
+        $product["product_name"] ?? "",
+        ENT_QUOTES,
+        "UTF-8"
     );
-    if (!mysqli_stmt_execute($activityStmt)) {
-        $error=mysqli_stmt_error($activityStmt);
-        mysqli_stmt_close($activityStmt);
-        echo json_encode([
-            "success" => false,
-            "message" =>
-                "Unlike could not be saved: " . $error
-        ]);
-        exit();
+    $description = htmlspecialchars(
+        $product["description"] ?? "",
+        ENT_QUOTES,
+        "UTF-8"
+    );
+    $category = htmlspecialchars(
+        $product["category"] ?? "",
+        ENT_QUOTES,
+        "UTF-8"
+    );
+    $price = number_format(
+        (float) ($product["price"] ?? 0),
+        2
+    );
+    $stock = (int) ($product["stock"] ?? 0);
+    $image = trim($product["image"] ?? "");
+    if ($image !== "") {
+        if (strpos($image, "images/products/") !== 0 &&
+            strpos($image, "http://") !== 0 &&
+            strpos($image, "https://") !== 0) {
+            $image = "images/products/" . ltrim($image, "/");
+        }
     }
-    mysqli_stmt_close($activityStmt);
-    echo json_encode([
-        "success" => true,
-        "wishlisted" => false,
-        "activity_saved" => true,
-        "activity_type" => "Unlike",
-        "message" => "Removed from wishlist."
-    ]);
-    exit();
+    echo '<div class="product-card">';
+    echo '<a
+            href="product_details.php?id=' . $productId . '"
+            class="product-link">';
+    echo '<div class="product-image">';
+    if (!empty($image)) {
+        echo '<img
+                src="' . htmlspecialchars(
+                    $image,
+                    ENT_QUOTES,
+                    "UTF-8"
+                ) . '"
+                alt="' . $productName . '">';
+    } else {
+        echo '<div class="no-image">No Image</div>';
+    }
+    echo '</div>';
+    echo '</a>';
+    echo '<div class="product-info">';
+    if ($category !== "") {
+        echo '<div class="product-category">' .
+            $category .
+            '</div>';
+    }
+    echo '<h3>' .
+        $productName .
+        '</h3>';
+    echo '<p>' .
+        $description .
+        '</p>';
+    echo '</div>';
+    echo '<div class="product-bottom">';
+    echo '<div class="product-details">';
+    echo '<div class="product-price">
+            Rs. ' . $price . '
+          </div>';
+    if ($stock > 0) {
+        echo '<div class="stock available">
+                In Stock: ' . $stock . '
+              </div>';
+    } else {
+        echo '<div class="stock out-of-stock">
+                Out of Stock
+              </div>';
+    }
+    echo '</div>';
+    echo '<div class="product-actions">';
+    echo '<button
+            type="button"
+            class="wishlist-btn"
+            data-id="' . $productId . '"
+            title="Remove from wishlist">
+            ♥ Wishlisted
+          </button>';
+    if ($stock > 0) {
+        echo '<button
+                type="button"
+                class="add-cart"
+                data-id="' . $productId . '">
+                Add to Cart
+              </button>';
+    } else {
+        echo '<button
+                type="button"
+                class="add-cart disabled"
+                disabled>
+                Out of Stock
+              </button>';
+    }
+    echo '</div>';
+    echo '</div>';
+    echo '</div>';
 }
-$insertStmt = mysqli_prepare(
-    $conn,
-    "INSERT INTO wishlist
-    (
-        user_id,
-        product_id
-    )
-    VALUES (?, ?)"
-);
-if (!$insertStmt) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Wishlist insert failed."
-    ]);
-    exit();
-}
-mysqli_stmt_bind_param(
-    $insertStmt,
-    "ii",
-    $userId,
-    $productId
-);
-if (!mysqli_stmt_execute($insertStmt)) {
-    $error = mysqli_stmt_error($insertStmt);
-    mysqli_stmt_close($insertStmt);
-    echo json_encode([
-        "success" => false,
-        "message" =>
-            "Unable to add wishlist: " . $error
-    ]);
-    exit();
-}
-mysqli_stmt_close($insertStmt);
-$activityType = "Like";
-$activityStmt = mysqli_prepare(
-    $conn,
-    "INSERT INTO user_product_activity
-    (
-        user_id,
-        product_id,
-        activity_type,
-        created_at
-    )
-    VALUES (?, ?, ?, NOW())"
-);
-if (!$activityStmt) {
-    echo json_encode([
-        "success" => false,
-        "message" =>
-            "Wishlist added, but activity query failed: " .
-            mysqli_error($conn)
-    ]);
-    exit();
-}
-mysqli_stmt_bind_param(
-    $activityStmt,
-    "iis",
-    $userId,
-    $productId,
-    $activityType
-);
-if (!mysqli_stmt_execute($activityStmt)) {
-    $error=mysqli_stmt_error($activityStmt);
-    mysqli_stmt_close($activityStmt);
-    echo json_encode([
-        "success" => false,
-        "message" =>
-            "Like could not be saved: " . $error
-    ]);
-    exit();
-}
-mysqli_stmt_close($activityStmt);
-echo json_encode([
-    "success" => true,
-    "wishlisted" => true,
-    "activity_saved" => true,
-    "activity_type" => "Like",
-    "message" => "Added to wishlist."
-]);
-exit();
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wishlist | Inknest</title>
+    <link rel="stylesheet" href="css/home.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/chat.css?v=<?php echo time(); ?>">
+    <style>
+        .wishlist-page-header {
+            width: 100%;
+            margin: 0 0 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .wishlist-page-header h2 {
+            margin: 0 0 6px;
+            font-size: 28px;
+            font-weight: 500;
+            line-height: 1.3;
+        }
+        .wishlist-page-header p {
+            margin: 0;
+            color: #777;
+            font-size: 14px;
+        }
+        .continue-shopping {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 15px;
+            border-radius: 5px;
+            background: #111;
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .continue-shopping:hover {
+            background: #222;
+        }
+        .wishlist-btn.wishlisted {
+            background: #111;
+            color: #fff;
+        }
+        .wishlist-btn.wishlisted:hover {
+            background: #222;
+        }
+        .empty-wishlist {
+            width: 100%;
+            min-height: 300px;
+            padding: 50px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .empty-wishlist-icon {
+            margin-bottom: 15px;
+            font-size: 50px;
+            line-height: 1;
+        }
+        .empty-wishlist h2 {
+            margin: 0 0 10px;
+            font-size: 24px;
+            font-weight: 500;
+        }
+        .empty-wishlist p {
+            margin: 0 0 20px;
+            color: #777;
+            font-size: 14px;
+        }
+        .wishlist-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .wishlist-view-btn {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            color: #111;
+            text-decoration: none;
+            font-size: 25px;
+            border-radius: 50%;
+        }
+        .wishlist-view-btn:hover,
+        .wishlist-view-btn.active {
+            background: #f5f5f5;
+        }
+        .wishlist-badge {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: #111;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        @media (max-width: 650px) {
+            .wishlist-page-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .wishlist-page-header h2 {
+                font-size: 25px;
+            }
+            .continue-shopping {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <h1>Inknest</h1>
+    <form class="search" action="home.php" method="GET">
+        <input type="text" name="search" placeholder="Search products..." value="" autocomplete="off">
+        <button type="submit">Search</button>
+    </form>
+    <div class="nav-links">
+        <div class="user-info">
+            <?php if (!empty($profileImage)): ?>
+                <img src="<?php echo htmlspecialchars(
+                        $profileImage,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    ); ?>"
+                    alt="Profile"
+                    class="profile-picture"
+                >
+            <?php else: ?>
+                <div class="profile-placeholder">
+                    <?php
+                    echo strtoupper(
+                        substr($username, 0, 1)
+                    );
+                    ?>
+                </div>
+            <?php endif; ?>
+            <span class="username">
+                <?php
+                echo htmlspecialchars(
+                    $username,
+                    ENT_QUOTES,
+                    "UTF-8"
+                );
+                ?>
+            </span>
+        </div>
+        <a href="home.php">Products</a>
+        <a href="wishlist.php" class="wishlist-nav-link">❤️</a>
+        <a href="manage_profile.php">Manage Profile</a>
+        <a href="cart.php" class="cart">
+            Cart
+            <span id="cartCount">
+                0
+            </span>
+        </a>
+        <a href="logout.php">Logout</a>
+    </div>
+</nav>
+<main class="container">
+    <div class="wishlist-page-header">
+        <div>
+            <h2>My Wishlist</h2>
+            <p>
+                <?php echo $wishlistCount; ?>
+                <?php
+                echo $wishlistCount === 1
+                    ? "item"
+                    : "items";
+                ?>
+                saved
+            </p>
+        </div>
+        <a href="home.php" class="continue-shopping">Continue Shopping</a>
+    </div>
+    <?php if (!empty($wishlistProducts)): ?>
+        <div class="product-grid">
+            <?php foreach ($wishlistProducts as $product): ?>
+                <?php
+                renderWishlistProduct($product);
+                ?>
+            <?php endforeach; ?>
+        </div>
+    <?php else: ?>
+        <div class="empty-wishlist">
+            <div class="empty-wishlist-icon">
+                ♡
+            </div>
+            <h2>Your Wishlist is Empty</h2>
+            <p>Save your favorite tattoo products here.</p>
+            <a href="home.php" class="continue-shopping">Browse Products</a>
+        </div>
+    <?php endif; ?>
+</main>
+<div class="inknest-chat-button" id="chatButton">
+    💬
+</div>
+<div class="inknest-chat-box" id="chatBox">
+    <div class="chat-header">
+        <span>Inknest Chat</span>
+        <button type="button" id="closeChat">×</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off">
+        <button type="button" id="sendChat">Send</button>
+    </div>
+</div>
+<script>
+window.currentUserId = <?php echo $userId; ?>;
+window.wishlistProducts = <?php
+    echo json_encode(
+        $wishlistProducts,
+        JSON_UNESCAPED_UNICODE |
+        JSON_UNESCAPED_SLASHES
+    );
+?>;
+</script>
+<script src="js/home.js?v=<?php echo time(); ?>" defer></script>
+<script src="js/chat.js?v=<?php echo time(); ?>" defer></script>
+</body>
+</html>

@@ -23,16 +23,9 @@ $profileStmt = mysqli_prepare(
      LIMIT 1"
 );
 if ($profileStmt) {
-    mysqli_stmt_bind_param(
-        $profileStmt,
-        "i",
-        $userId
-    );
+    mysqli_stmt_bind_param($profileStmt, "i", $userId);
     mysqli_stmt_execute($profileStmt);
-    mysqli_stmt_bind_result(
-        $profileStmt,
-        $profilePictureValue
-    );
+    mysqli_stmt_bind_result($profileStmt, $profilePictureValue);
     if (mysqli_stmt_fetch($profileStmt)) {
         $profilePicture = $profilePictureValue ?? "";
     }
@@ -46,16 +39,9 @@ $wishlistStmt = mysqli_prepare(
      WHERE user_id = ?"
 );
 if ($wishlistStmt) {
-    mysqli_stmt_bind_param(
-        $wishlistStmt,
-        "i",
-        $userId
-    );
+    mysqli_stmt_bind_param($wishlistStmt, "i", $userId);
     mysqli_stmt_execute($wishlistStmt);
-    mysqli_stmt_bind_result(
-        $wishlistStmt,
-        $wishlistProductId
-    );
+    mysqli_stmt_bind_result($wishlistStmt, $wishlistProductId);
     while (mysqli_stmt_fetch($wishlistStmt)) {
         $wishlistProducts[(int) $wishlistProductId] = true;
     }
@@ -229,13 +215,9 @@ function renderProductCard(
                 ?>
             </button>
             <?php if ($stock > 0): ?>
-                <button type="button" class="add-cart" data-id="<?php echo $productId; ?>">
-                    Add to Cart
-                </button>
+                <button type="button" class="add-cart" data-id="<?php echo $productId; ?>">Add to Cart</button>
             <?php else: ?>
-                <button type="button" class="add-cart disabled" disabled>
-                    Out of Stock
-                </button>
+                <button type="button" class="add-cart disabled" disabled>Out of Stock</button>
             <?php endif; ?>
         </div>
     </div>
@@ -402,6 +384,47 @@ function renderProductCard(
             color: #777;
             font-size: 13px;
         }
+        .wishlist-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-left: 4px;
+        }
+        .wishlist-view-btn {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            text-decoration: none;
+            color: inherit;
+        }
+        .wishlist-view-btn:hover {
+            opacity: 0.75;
+        }
+        .wishlist-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 17px;
+            height: 17px;
+            padding: 0 4px;
+            background: #e53935;
+            color: #fff;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 17px;
+        }
         @media (max-width: 900px) {
             .navbar .search {
                 flex-wrap: wrap;
@@ -442,8 +465,7 @@ function renderProductCard(
 <nav class="navbar">
     <h1>Inknest</h1>
     <form class="search" method="GET" action="home.php">
-        <input type="text" name="search"
-            placeholder="Search products..."
+        <input type="text" name="search" placeholder="Search products..."
             value="<?php
                 echo htmlspecialchars(
                     $search,
@@ -494,11 +516,7 @@ function renderProductCard(
                 ?>
             </span>
             <div class="notification-wrapper">
-                <button type="button"
-                    class="notification-btn"
-                    id="notificationBtn"
-                    aria-label="New products and recommendations"
-                    aria-expanded="false">
+                <button type="button" class="notification-btn" id="notificationBtn" aria-label="New products and recommendations" aria-expanded="false">
                     🔔
                     <span class="notification-badge" id="notificationBadge" style="display:none;">
                         0
@@ -517,6 +535,20 @@ function renderProductCard(
                     </div>
                 </div>
             </div>
+            <div class="wishlist-wrapper">
+                <a href="wishlist.php" class="wishlist-view-btn" aria-label="View Wishlist">
+                    ❤️
+                    <?php if (count($wishlistProducts) > 0): ?>
+                        <span class="wishlist-badge">
+                            <?php
+                            echo count($wishlistProducts) > 9
+                                ? "9+"
+                                : count($wishlistProducts);
+                            ?>
+                        </span>
+                    <?php endif; ?>
+                </a>
+            </div>
         </div>
         <a href="profile.php">Manage Profile</a>
         <a href="cart.php" class="cart">
@@ -529,10 +561,7 @@ function renderProductCard(
     </div>
 </nav>
 <main class="container">
-    <?php if (
-        !empty($recommendedProducts) &&
-        ($search === "" || $category !== "")
-    ): ?>
+    <?php if (!empty($recommendedProducts) && ($search === "" || $category !== "")): ?>
         <section class="products-section">
             <div class="heading">
                 <h2>Recommended for You</h2>
@@ -546,11 +575,12 @@ function renderProductCard(
                             "UTF-8"
                         );
                     ?>">
-                <select name="category" class="category-select" onchange="this.form.submit()">
-                    <option value="">All Categories</option>
+                <select name="category" class="category-select"  onchange="this.form.submit()">
+                    <option value="">
+                        All Categories
+                    </option>
                     <?php foreach ($categories as $categoryName): ?>
-                        <option
-                            value="<?php
+                        <option value="<?php
                                 echo htmlspecialchars(
                                     $categoryName,
                                     ENT_QUOTES,
@@ -584,8 +614,7 @@ function renderProductCard(
                         ?>>
                         Newest
                     </option>
-                    <option
-                        value="oldest"
+                    <option value="oldest"
                         <?php
                         echo $sort === "oldest"
                             ? "selected"
@@ -642,7 +671,8 @@ function renderProductCard(
     <section class="products-section">
         <div class="heading">
             <?php if ($search !== "" && $category !== ""): ?>
-                <h2><?php
+                <h2>
+                    <?php
                     echo htmlspecialchars(
                         $category,
                         ENT_QUOTES,
@@ -692,7 +722,9 @@ function renderProductCard(
                     );
                 ?>">
             <select name="category" class="category-select" onchange="this.form.submit()">
-                <option value="">All Categories</option>
+                <option value="">
+                    All Categories
+                </option>
                 <?php foreach ($categories as $categoryName): ?>
                     <option value="<?php
                             echo htmlspecialchars(
@@ -806,12 +838,8 @@ function renderProductCard(
 <div class="inknest-chat-box" id="inknestChatBox">
     <div class="inknest-chat-header">
         <div class="inknest-chat-title">
-            <strong>
-                Inknest Support
-            </strong>
-            <span>
-                We are here to help
-            </span>
+            <strong>Inknest Support</strong>
+            <span>We are here to help</span>
         </div>
         <button type="button" class="inknest-chat-close" id="inknestChatClose">x</button>
     </div>
@@ -828,11 +856,11 @@ function renderProductCard(
 <script src="js/chat.js?v=<?php echo time(); ?>"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const notificationBtn = document.getElementById("notificationBtn");
-    const notificationBadge = document.getElementById("notificationBadge");
-    const notificationDropdown = document.getElementById("notificationDropdown");
-    const notificationList = document.getElementById("notificationList");
-    const userInfo = document.querySelector(".user-info");
+    const notificationBtn=document.getElementById("notificationBtn");
+    const notificationBadge=document.getElementById("notificationBadge");
+    const notificationDropdown=document.getElementById("notificationDropdown");
+    const notificationList=document.getElementById("notificationList");
+    const userInfo=document.querySelector(".user-info");
     if (!notificationBtn ||
         !notificationBadge ||
         !notificationDropdown ||
@@ -840,13 +868,13 @@ document.addEventListener("DOMContentLoaded", function () {
         !userInfo) {
         return;
     }
-    const userId=userInfo.dataset.userId;
+    const userId = userInfo.dataset.userId;
     const productStorageKey="inknest_last_product_id_" + userId;
     const recommendationStorageKey="inknest_seen_recommendations_" + userId;
     let currentLatestId = 0;
     let newProductItems = [];
-    let recommendationItems=[];
-    const recommendationData=<?php
+    let recommendationItems = [];
+    const recommendationData = <?php
         echo json_encode(
             array_map(
                 function ($product) {
@@ -864,7 +892,7 @@ document.addEventListener("DOMContentLoaded", function () {
             JSON_HEX_QUOT |
             JSON_HEX_AMP
         );
-        ?>;
+    ?>;
     notificationBtn.addEventListener(
         "click",
         function (event) {
@@ -913,17 +941,17 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     );
     function escapeHTML(value) {
-        const div = document.createElement("div");
+        const div=document.createElement("div");
         div.textContent = value ?? "";
         return div.innerHTML;
     }
     function getSeenRecommendationIds() {
         try {
-            const stored =localStorage.getItem(recommendationStorageKey);
+            const stored=localStorage.getItem(recommendationStorageKey);
             if (!stored) {
                 return [];
             }
-            const parsed = JSON.parse(stored);
+            const parsed=JSON.parse(stored);
             return Array.isArray(parsed)
                 ? parsed.map(String)
                 : [];
@@ -945,14 +973,15 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
     function updateNotificationBadge() {
-        const totalNotifications=newProductItems.length+recommendationItems.length;
+        const totalNotifications=newProductItems.length + recommendationItems.length;
         if (totalNotifications > 0) {
-            notificationBadge.textContent=totalNotifications > 9
+            notificationBadge.textContent =
+                totalNotifications > 9
                     ? "9+"
                     : totalNotifications;
-            notificationBadge.style.display = "flex";
+            notificationBadge.style.display="flex";
         } else {
-            notificationBadge.style.display = "none";
+            notificationBadge.style.display ="none";
         }
     }
     function createNotificationItem(
@@ -963,7 +992,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (item.image) {
             let imagePath = item.image;
             if (!imagePath.startsWith("images/products/")) {
-                imagePath="images/products/" + imagePath;
+                imagePath="images/products/"+imagePath;
             }
             imageHTML = `
                 <img
@@ -978,7 +1007,7 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
         }
         const link=document.createElement("a");
-        link.href ="product_details.php?id=" + encodeURIComponent(item.id);
+        link.href="product_details.php?id=" +encodeURIComponent(item.id);
         link.className="notification-item";
         const categoryText=isRecommendation
                 ? "Recommended for you"
@@ -990,14 +1019,10 @@ document.addEventListener("DOMContentLoaded", function () {
             ${imageHTML}
             <div class="notification-item-info">
                 <div class="notification-item-name">
-                    ${escapeHTML(
-                        item.product_name
-                    )}
+                    ${escapeHTML(item.product_name)}
                 </div>
                 <div class="notification-item-category">
-                    ${escapeHTML(
-                        categoryText
-                    )}
+                    ${escapeHTML(categoryText)}
                 </div>
             </div>
         `;
@@ -1042,8 +1067,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 10
             );
         recommendationItems=getUnreadRecommendations();
-        fetch(
-            "new_items.php?last_id=" +
+        fetch("new_items.php?last_id=" +
             lastId,
             {
                 method: "GET",
@@ -1072,7 +1096,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         productStorageKey,
                         currentLatestId
                     );
-                    newProductItems=[];
+                    newProductItems = [];
                 } else {
                     newProductItems=data.new_items || [];
                 }
